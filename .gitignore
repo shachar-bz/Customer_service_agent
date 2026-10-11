@@ -1,1 +1,5 @@
 CLAUDE.md
+.DS_Store
+__pycache__/
+.env
+product_data.csv
