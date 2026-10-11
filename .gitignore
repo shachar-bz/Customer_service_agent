@@ -4,3 +4,6 @@ CLAUDE.md
 __pycache__/
 .env
 product_data.csv
+chroma_data/
+agent.log
+.pytest_cache/
