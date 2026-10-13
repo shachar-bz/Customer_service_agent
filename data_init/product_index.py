@@ -35,7 +35,6 @@ def product_embedding_text(product: Product) -> str:
     return (
         f"Name: {product.name}. "
         f"Category: {product.category}. "
-        f"Brand: {product.brand}. "
         f"Description: {product.description}"
     )
 
