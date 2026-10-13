@@ -25,10 +25,3 @@ def load_store_data() -> StoreData:
         product_index=build_product_index(products),
         customers=get_cust_data_collection(),
     )
-
-
-if __name__ == "__main__":
-    store_data = load_store_data()
-    print(f"Products: {len(store_data.products_by_id)}")
-    print(f"Indexed products: {store_data.product_index.count()}")
-    print(f"Customers: {store_data.customers.count_documents({})}")

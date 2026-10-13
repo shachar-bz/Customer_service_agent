@@ -84,9 +84,3 @@ def load_product_catalog(csv_path: Path = PRODUCT_CSV_PATH) -> list[Product]:
 
 def index_products_by_id(products: list[Product]) -> dict[str, Product]:
     return {product.uniq_id: product for product in products}
-
-
-if __name__ == "__main__":
-    catalog = load_product_catalog()
-    print(f"Loaded {len(catalog)} products")
-    print(catalog[0].model_dump_json(indent=2)[:600])

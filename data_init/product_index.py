@@ -105,10 +105,3 @@ def build_product_index(
         )
 
     return ProductIndex(collection)
-
-
-if __name__ == "__main__":
-    product_index = build_product_index(load_product_catalog())
-    print(f"Indexed {product_index.count()} products")
-    for match in product_index.search("digital thermometer for kids", top_k=3):
-        print(match)
