@@ -1,13 +1,11 @@
 """authenticate tool: verifies a customer's email and password and records premier status in the session."""
 from __future__ import annotations
 
-from typing import Any
-
 from mongomock.collection import Collection
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from orchestration.session import ConversationSession
-from tools.base import Tool
+from tools.base import ToolResult
 
 INVALID_CREDENTIALS_MESSAGE = "Invalid email or password."
 
@@ -51,22 +49,16 @@ class AuthenticateArgs(BaseModel):
         return email.strip().lower()
 
 
-class AuthenticateTool(Tool):
-    SCHEMA = AUTHENTICATE_SCHEMA
-    ArgsModel = AuthenticateArgs
+def authenticate(
+    customers: Collection, session: ConversationSession, email: str, pw: str
+) -> ToolResult:
+    customer = customers.find_one({"email": email, "pw": pw})
+    if customer is None:
+        # A failed attempt keeps any earlier successful login untouched.
+        return {"error": INVALID_CREDENTIALS_MESSAGE}
 
-    def __init__(self, customers: Collection, session: ConversationSession):
-        self.customers = customers
-        self.session = session
-
-    def run(self, args: AuthenticateArgs) -> dict[str, Any]:
-        customer = self.customers.find_one({"email": args.email, "pw": args.pw})
-        if customer is None:
-            # A failed attempt keeps any earlier successful login untouched.
-            return {"error": INVALID_CREDENTIALS_MESSAGE}
-
-        self.session.is_premier = customer["status"] == "premier"
-        return {
-            "full_name": f"{customer['first_name']} {customer['last_name']}",
-            "status": customer["status"],
-        }
+    session.is_premier = customer["status"] == "premier"
+    return {
+        "full_name": f"{customer['first_name']} {customer['last_name']}",
+        "status": customer["status"],
+    }

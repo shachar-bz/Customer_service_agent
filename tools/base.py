@@ -1,28 +1,22 @@
-"""Abstract contract every agent tool implements: a schema for the LLM, pydantic validation, and run."""
+"""Shared contract for agent tools: validate the LLM's arguments with pydantic, then call the tool function."""
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import Any, ClassVar
+from typing import Any, Callable
 
 from pydantic import BaseModel, ValidationError
 
+ToolResult = dict[str, Any]
 
-class Tool(ABC):
-    SCHEMA: ClassVar[dict[str, Any]]
-    ArgsModel: ClassVar[type[BaseModel]]
 
-    @property
-    def name(self) -> str:
-        return self.SCHEMA["function"]["name"]
-
-    def execute(self, raw_args: dict[str, Any]) -> dict[str, Any]:
-        """Validates the LLM's arguments; invalid ones come back as an error the LLM can correct."""
-        try:
-            args = self.ArgsModel.model_validate(raw_args)
-        except ValidationError as error:
-            return {"error": f"Invalid arguments for {self.name}: {error}"}
-        return self.run(args)
-
-    @abstractmethod
-    def run(self, args: BaseModel) -> dict[str, Any]:
-        ...
+def execute_tool(
+    tool_args_model: type[BaseModel],
+    tool_function: Callable[..., ToolResult],
+    raw_args: dict[str, Any],
+) -> ToolResult:
+    """tool_function arrives with its dependencies (data, session) already bound via functools.partial.
+    Invalid arguments come back as an error the LLM can correct."""
+    try:
+        args = tool_args_model.model_validate(raw_args)
+    except ValidationError as error:
+        return {"error": f"Invalid arguments: {error}"}
+    return tool_function(**args.model_dump())

@@ -6,4 +6,4 @@
 - **Customer price** — what this customer pays: sale price minus the premier discount, if any. Hard price constraints (e.g. "under $100") compare against this.
 - **Priced product view** — the product fields price-aware tools return: id, name, brand, category, list price, sale price, on sale, customer price.
 - **Conversation session** — per-conversation state; holds only whether the authenticated customer is premier.
-- **Tool** — a capability the agent can call: a `{TOOL}_SCHEMA` for the LLM, a pydantic args model, and `run`.
+- **Tool** — a capability the agent can call: a `{TOOL}_SCHEMA` for the LLM, a pydantic args model, and a plain function; `tools/base.py::execute_tool` validates then calls it.
