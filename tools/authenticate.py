@@ -1,11 +1,12 @@
 """authenticate tool: verifies a customer's email and password and records premier status in the session."""
 from __future__ import annotations
 
+from typing import Any
+
 from mongomock.collection import Collection
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from orchestration.session import ConversationSession
-from tools.base import ToolResult
 
 INVALID_CREDENTIALS_MESSAGE = "Invalid email or password."
 
@@ -51,7 +52,7 @@ class AuthenticateArgs(BaseModel):
 
 def authenticate(
     customers: Collection, session: ConversationSession, email: str, pw: str
-) -> ToolResult:
+) -> dict[str, Any]:
     customer = customers.find_one({"email": email, "pw": pw})
     if customer is None:
         # A failed attempt keeps any earlier successful login untouched.

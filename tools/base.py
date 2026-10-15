@@ -5,14 +5,12 @@ from typing import Any, Callable
 
 from pydantic import BaseModel, ValidationError
 
-ToolResult = dict[str, Any]
-
 
 def execute_tool(
     tool_args_model: type[BaseModel],
-    tool_function: Callable[..., ToolResult],
+    tool_function: Callable[..., dict[str, Any]],
     raw_args: dict[str, Any],
-) -> ToolResult:
+) -> dict[str, Any]:
     """tool_function arrives with its dependencies (data, session) already bound via functools.partial.
     Invalid arguments come back as an error the LLM can correct."""
     try:
