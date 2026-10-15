@@ -1,15 +1,27 @@
-"""Agent loop: OpenAI Responses API tool calling, run until the model answers or LLM_CAP / TOOL_CAP is hit."""
+"""Customer-service agent: answer_question entry point and the OpenAI Responses API tool-calling loop.
+
+Import-safe: heavy modules (data, vector index, tools, OpenAI) load on the first question.
+"""
 from __future__ import annotations
 
 import json
+import logging
 import time
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from openai import OpenAI
-
-from orchestration.agent_trace import AgentRun, ToolCallRecord
+from orchestration.agent_trace import AgentRun, ToolCallRecord, format_agent_run
 from orchestration.prompt import SYSTEM_PROMPT
-from orchestration.tool_registry import ToolRegistry
+
+if TYPE_CHECKING:
+    from openai import OpenAI
+
+    from orchestration.tool_registry import ToolRegistry
+
+AGENT_LOG_PATH = Path(__file__).resolve().parent.parent / "agent.log"
+FAILURE_ANSWER = (
+    "Sorry, something went wrong while answering your question. Please try again later."
+)
 
 AGENT_MODEL = "gpt-6.1-sol"
 REASONING_EFFORT = "medium"
@@ -28,6 +40,35 @@ FORCED_ANSWER_INSTRUCTION = (
     "customer's question, answer it now. Otherwise reply with exactly this text:\n"
     f"{CAP_REACHED_APOLOGY}"
 )
+
+agent_logger = logging.getLogger("customer_service_agent")
+
+
+def _ensure_agent_log_handler() -> None:
+    if agent_logger.handlers:
+        return
+    file_handler = logging.FileHandler(AGENT_LOG_PATH, encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s\n%(message)s\n"))
+    agent_logger.addHandler(file_handler)
+    agent_logger.setLevel(logging.INFO)
+    agent_logger.propagate = False
+
+
+def answer_question(question: str) -> str:
+    """Never raises: any failure is logged and answered with FAILURE_ANSWER.
+    Every run's trace (tool calls, arguments, results, errors, latency, final answer) goes to agent.log."""
+    _ensure_agent_log_handler()
+    try:
+        # Imported here: runtime loads the heavy modules and itself imports run_agent from this module.
+        from orchestration.runtime import run_customer_service_agent
+
+        agent_run = run_customer_service_agent(question)
+    except Exception:
+        agent_logger.exception("QUESTION: %s\nanswer_question failed", question)
+        return FAILURE_ANSWER
+
+    agent_logger.info(format_agent_run(agent_run))
+    return agent_run.final_answer
 
 
 def _elapsed_ms(start_time: float) -> float:
