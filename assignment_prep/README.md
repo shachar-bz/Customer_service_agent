@@ -12,7 +12,7 @@ policies.
 |---------------------------|-------------------------------------------------------------------------|
 | `fetch_product_data.py`   | Downloads the real Walmart product dataset and shortens it to `product_data.csv` (787 rows). |
 | `customers.json`          | 50 customer records (the customer database).                            |
-| `customer_store.py`       | Loads `customers.json` into an in-memory `cust_data` collection (mongomock). |
+| `data_init/customer_store.py` | Loads `customers.json` into an in-memory `cust_data` collection (mongomock). |
 | `policies.txt`            | The 7 company policies your agent must enforce.                         |
 | `example_queries.txt`     | 10 sample customer queries (illustrative only — see warning below).     |
 | `prepare_dataset.py`      | Run once to verify all files are present and the data is ready.         |
@@ -63,12 +63,12 @@ policies.
    `Sale Price`, `Brand`, `Gtin`, `Category`, `Available`). Per company policy,
    this file is the authoritative source of product information — not the Internet.
 
-2. **`customers.json` via `customer_store.py`** — 50 customer records. Each record
+2. **`customers.json` via `data_init/customer_store.py`** — 50 customer records. Each record
    has: `first_name`, `last_name`, `age`, `email`, `pw`, `status` (`premier` or
    `regular`), and `product-interests` (a list drawn from the 18 product-interest
    categories). Load them with:
    ```python
-   from customer_store import get_cust_data_collection
+   from data_init.customer_store import get_cust_data_collection
    cust_data = get_cust_data_collection()
    ```
    `cust_data` is a standard pymongo-style collection supporting

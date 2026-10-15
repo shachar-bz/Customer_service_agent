@@ -1,4 +1,4 @@
-from customer_store import get_cust_data_collection
+from data_init.customer_store import get_cust_data_collection
 
 
 def test_loads_all_customers():

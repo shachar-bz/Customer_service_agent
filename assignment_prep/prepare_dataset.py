@@ -4,7 +4,7 @@ import os, sys, csv
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Files may live next to this script (assignment_prep/) or one level up (repo root).
 SEARCH_DIRS = [SCRIPT_DIR, os.path.dirname(SCRIPT_DIR)]
-REQUIRED = ["fetch_product_data.py","customers.json","customer_store.py",
+REQUIRED = ["fetch_product_data.py","customers.json",
             "policies.txt","example_queries.txt","README.md"]
 
 def find_file(name):
@@ -28,8 +28,8 @@ def main():
             "Brand","Gtin","Category","Available"]
     if header[:9] != need: sys.exit(f"product_data.csv columns wrong: {header[:9]}")
     if len(data) != 787: sys.exit(f"product_data.csv has {len(data)} rows, expected 787.")
-    sys.path.insert(0, os.path.dirname(find_file("customer_store.py")))
-    import customer_store
+    sys.path.insert(0, os.path.dirname(SCRIPT_DIR))
+    from data_init import customer_store
     n = customer_store.get_cust_data_collection().count_documents({})
     if n != 50: sys.exit(f"customers.json has {n} records, expected 50.")
     print("All required files found. You are ready to start working on hw4.py.")

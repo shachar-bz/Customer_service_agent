@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from mongomock.collection import Collection
 
-from customer_store import get_cust_data_collection
+from data_init.customer_store import get_cust_data_collection
 from data_init.product_catalog import Product, index_products_by_id, load_product_catalog
 from data_init.product_index import ProductIndex, build_product_index
 

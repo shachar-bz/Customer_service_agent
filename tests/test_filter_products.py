@@ -2,7 +2,7 @@ from functools import partial
 
 import pytest
 
-from customer_store import get_cust_data_collection
+from data_init.customer_store import get_cust_data_collection
 from data_init.product_catalog import Product, load_product_catalog
 from orchestration.session import ConversationSession
 from tools.authenticate import AuthenticateArgs, authenticate

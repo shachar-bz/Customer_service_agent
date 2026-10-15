@@ -2,7 +2,7 @@ from functools import partial
 
 import pytest
 
-from customer_store import get_cust_data_collection
+from data_init.customer_store import get_cust_data_collection
 from tools.base import execute_tool
 from tools.get_customer import NO_CUSTOMER_FOUND_MESSAGE, GetCustomerArgs, get_customer
 
