@@ -7,3 +7,5 @@ product_data.csv
 chroma_data/
 agent.log
 .pytest_cache/
+docs/
+GLOSSARY.md
