@@ -11,3 +11,5 @@
 - **Category level** — one `|`-separated piece of a product's category path, e.g. `Bathroom Scales` in `Health | Home Health Care | Bathroom Scales | Mechanical Scales`. The `|` is internal; callers pass level names only.
 - **Calculator** — `calculator` tool; the agent does all arithmetic through it, never in its head. Evaluates via an AST whitelist (no `eval`); results rounded to 2 decimals.
 - **Customer lookup** — `get_customer` by email and/or full name; returns only full name + product interests, no auth needed. Rules: ADR 0003.
+- **Semantic search** — `search_products(query)`: retrieves 15 nearest products from the vector index, reranks them, returns the top 10 with `relevance_probability`. Rules: ADR 0004.
+- **Rerank** — one OpenAI Decisions API `choice` call over the retrieved candidates; each candidate's choice probability is its relevance. Falls back to vector order on failure.
