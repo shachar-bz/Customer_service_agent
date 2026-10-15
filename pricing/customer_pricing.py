@@ -17,6 +17,7 @@ class PricedProduct(BaseModel):
     sale_price: float
     on_sale: bool
     customer_price: float
+    available: bool
 
 
 def customer_price(product: Product, discount_rate: float) -> float:
@@ -34,4 +35,5 @@ def priced_product_view(product: Product, discount_rate: float) -> PricedProduct
         sale_price=product.sale_price,
         on_sale=product.is_on_sale,
         customer_price=customer_price(product, discount_rate),
+        available=product.available,
     )

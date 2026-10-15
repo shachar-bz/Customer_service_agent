@@ -33,3 +33,4 @@ def test_priced_view_exposes_both_prices():
     assert view.sale_price == 104.0
     assert view.on_sale
     assert view.customer_price == 98.8
+    assert view.available
