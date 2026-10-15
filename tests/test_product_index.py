@@ -2,7 +2,7 @@ import chromadb
 from chromadb.config import Settings
 
 from data_init.product_catalog import Product
-from data_init.product_index import (
+from rag.product_index import (
     COLLECTION_NAME_PREFIX,
     build_product_index,
     catalog_hash,
