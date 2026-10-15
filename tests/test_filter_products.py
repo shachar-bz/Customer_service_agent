@@ -2,8 +2,10 @@ from functools import partial
 
 import pytest
 
+from customer_store import get_cust_data_collection
 from data_init.product_catalog import Product, load_product_catalog
 from orchestration.session import ConversationSession
+from tools.authenticate import AuthenticateArgs, authenticate
 from tools.base import execute_tool
 from tools.filter_products import (
     MAX_FILTER_RESULTS,
@@ -166,3 +168,20 @@ def test_real_catalog_results_respect_premier_budget():
     assert result["total_matches"] > 0
     assert all(product["customer_price"] <= 11.50 for product in result["products"])
     assert all(product["available"] for product in result["products"])
+
+
+def test_premier_login_applies_discount_to_later_filter_calls(session):
+    bound_authenticate = partial(authenticate, get_cust_data_collection(), session)
+    run_filter = make_runner([make_product("p1", sale_price=104.99)], session)
+
+    assert run_filter({"max_price_exclusive": 100})["total_matches"] == 0
+
+    execute_tool(
+        AuthenticateArgs,
+        bound_authenticate,
+        {"email": "amanda.wilson@gmail.com", "pw": "HealthTracker789"},
+    )
+    result = run_filter({"max_price_exclusive": 100})
+
+    assert product_ids(result) == ["p1"]
+    assert result["products"][0]["customer_price"] == 99.74
