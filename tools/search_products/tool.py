@@ -16,32 +16,31 @@ RERANK_UNAVAILABLE_NOTE = (
 
 SEARCH_PRODUCTS_SCHEMA = {
     "type": "function",
-    "function": {
-        "name": "search_products",
-        "description": (
-            f"""Semantic search over the product catalog. Use it for natural-language needs
-                ("something to keep my coffee hot on the go") and "something like X" requests.
-                Returns the {SEARCH_RESULT_COUNT} most relevant products, most relevant first, each
-                with a relevance_probability. It does not enforce hard constraints (price, brand,
-                category, availability): use filter_products for those, and check the returned
-                fields (e.g. available, customer_price) before recommending.
-                Prices include the premier discount for a premier customer."""
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": (
-                        "The need in natural language, e.g. 'bathroom scale that shows lbs and kg' "
-                        "or 'something like the Eufy BodySense Smart Scale'."
-                    ),
-                },
+    "name": "search_products",
+    "description": (
+        f"""Semantic search over the product catalog. Use it for natural-language needs
+            ("something to keep my coffee hot on the go") and "something like X" requests.
+            Returns the {SEARCH_RESULT_COUNT} most relevant products, most relevant first, each
+            with a relevance_probability. It does not enforce hard constraints (price, brand,
+            category, availability): use filter_products for those, and check the returned
+            fields (e.g. available, customer_price) before recommending.
+            Prices include the premier discount for a premier customer."""
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": (
+                    "The need in natural language, e.g. 'bathroom scale that shows lbs and kg' "
+                    "or 'something like the Eufy BodySense Smart Scale'."
+                ),
             },
-            "required": ["query"],
-            "additionalProperties": False,
         },
+        "required": ["query"],
+        "additionalProperties": False,
     },
+    "strict": False,
 }
 
 

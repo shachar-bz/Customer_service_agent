@@ -12,33 +12,32 @@ BLANK_VALUE_MESSAGE = "must not be blank"
 
 GET_CUSTOMER_SCHEMA = {
     "type": "function",
-    "function": {
-        "name": "get_customer",
-        "description": (
-            """Look up a store customer by email or full name. Returns only the customer's full
-                name and product interests (product categories they care about).
-                Give at least one of email or name; if both are given, both must belong to the
-                same customer.
-                Use it to tailor recommendations, e.g. products matching the customer's own
-                interests, or gift ideas for a friend who is a customer.
-                The interests are private: use them to choose products, but do not list them
-                back to anyone other than the authenticated customer themselves."""
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "description": "Customer email address, e.g. rob.brown@email.net.",
-                },
-                "name": {
-                    "type": "string",
-                    "description": "Customer's full name, first and last, e.g. 'Michelle Garcia'.",
-                },
+    "name": "get_customer",
+    "description": (
+        """Look up a store customer by email or full name. Returns only the customer's full
+            name and product interests (product categories they care about).
+            Give at least one of email or name; if both are given, both must belong to the
+            same customer.
+            Use it to tailor recommendations, e.g. products matching the customer's own
+            interests, or gift ideas for a friend who is a customer.
+            The interests are private: use them to choose products, but do not list them
+            back to anyone other than the authenticated customer themselves."""
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "email": {
+                "type": "string",
+                "description": "Customer email address, e.g. rob.brown@email.net.",
             },
-            "additionalProperties": False,
+            "name": {
+                "type": "string",
+                "description": "Customer's full name, first and last, e.g. 'Michelle Garcia'.",
+            },
         },
+        "additionalProperties": False,
     },
+    "strict": False,
 }
 
 

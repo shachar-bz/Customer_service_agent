@@ -23,70 +23,69 @@ TOO_MANY_MATCHES_NOTE = (
 
 FILTER_PRODUCTS_SCHEMA = {
     "type": "function",
-    "function": {
-        "name": "filter_products",
-        "description": (
-            """Find products that satisfy hard constraints. Every argument is optional, and all
-                given constraints are combined with AND (a product must satisfy every one).
-                Call this whenever the customer states a hard constraint: a price limit, a brand,
-                a category, a product name, or availability.
-                Prices are compared against the customer price, which already includes the
-                premier discount for a premier customer.
-                For "X or Y" requests, call this tool once per alternative and merge the results.
-                Returns at most 10 products; if more match, a note gives the total."""
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "max_price_exclusive": {
-                    "type": "number",
-                    "description": "Customer price must be less than this (<). E.g. 'under $100'.",
-                },
-                "max_price_inclusive": {
-                    "type": "number",
-                    "description": "Customer price must be at most this (<=). E.g. 'at most $11.50'.",
-                },
-                "min_price_exclusive": {
-                    "type": "number",
-                    "description": "Customer price must be greater than this (>). E.g. 'over $20'.",
-                },
-                "min_price_inclusive": {
-                    "type": "number",
-                    "description": "Customer price must be at least this (>=). E.g. '$20 or more'.",
-                },
-                "brand": {
-                    "type": "string",
-                    "description": "Exact brand name, case-insensitive, e.g. 'LHCER'.",
-                },
-                "categories": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": (
-                        "Only when the customer explicitly names a category. Each value is one "
-                        "category name such as 'Bathroom Scales' or 'Health' (case-insensitive, "
-                        "whole name, not a fragment). A product must belong to ALL listed "
-                        "categories, so 'health and bathroom scales' -> ['Health', 'Bathroom Scales']."
-                    ),
-                },
-                "name_contains": {
-                    "type": "string",
-                    "description": (
-                        "Only when the customer explicitly names the product. The beginning of the "
-                        "product name, case-insensitive: 'Eufy BodySense' matches "
-                        "'Eufy BodySense Smart Scale', 'Smart Scale' does not."
-                    ),
-                },
-                "available": {
-                    "type": "boolean",
-                    "description": (
-                        "Default true: only products in stock. false: search the whole catalog, "
-                        "in stock and out of stock."
-                    ),
-                },
+    "name": "filter_products",
+    "description": (
+        """Find products that satisfy hard constraints. Every argument is optional, and all
+            given constraints are combined with AND (a product must satisfy every one).
+            Call this whenever the customer states a hard constraint: a price limit, a brand,
+            a category, a product name, or availability.
+            Prices are compared against the customer price, which already includes the
+            premier discount for a premier customer.
+            For "X or Y" requests, call this tool once per alternative and merge the results.
+            Returns at most 10 products; if more match, a note gives the total."""
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "max_price_exclusive": {
+                "type": "number",
+                "description": "Customer price must be less than this (<). E.g. 'under $100'.",
             },
-            "additionalProperties": False,
+            "max_price_inclusive": {
+                "type": "number",
+                "description": "Customer price must be at most this (<=). E.g. 'at most $11.50'.",
+            },
+            "min_price_exclusive": {
+                "type": "number",
+                "description": "Customer price must be greater than this (>). E.g. 'over $20'.",
+            },
+            "min_price_inclusive": {
+                "type": "number",
+                "description": "Customer price must be at least this (>=). E.g. '$20 or more'.",
+            },
+            "brand": {
+                "type": "string",
+                "description": "Exact brand name, case-insensitive, e.g. 'LHCER'.",
+            },
+            "categories": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "Only when the customer explicitly names a category. Each value is one "
+                    "category name such as 'Bathroom Scales' or 'Health' (case-insensitive, "
+                    "whole name, not a fragment). A product must belong to ALL listed "
+                    "categories, so 'health and bathroom scales' -> ['Health', 'Bathroom Scales']."
+                ),
+            },
+            "name_contains": {
+                "type": "string",
+                "description": (
+                    "Only when the customer explicitly names the product. The beginning of the "
+                    "product name, case-insensitive: 'Eufy BodySense' matches "
+                    "'Eufy BodySense Smart Scale', 'Smart Scale' does not."
+                ),
+            },
+            "available": {
+                "type": "boolean",
+                "description": (
+                    "Default true: only products in stock. false: search the whole catalog, "
+                    "in stock and out of stock."
+                ),
+            },
         },
+        "additionalProperties": False,
     },
+    "strict": False,
 }
 
 

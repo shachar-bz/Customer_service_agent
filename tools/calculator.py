@@ -37,33 +37,32 @@ ALLOWED_FUNCTIONS: dict[str, tuple[Callable[..., Any], int, float]] = {
 
 CALCULATOR_SCHEMA = {
     "type": "function",
-    "function": {
-        "name": "calculator",
-        "description": (
-            """Evaluate an arithmetic expression and return the result rounded to 2 decimal places.
-                ALWAYS use this tool for any arithmetic; never compute numbers in your head,
-                not even simple sums or differences.
-                Use it for, e.g.: totals of several prices, how much more a customer must
-                spend to reach premier status, how much a discount or a cheaper product saves,
-                or how many days a product will last.
-                Supports numbers, + - * / // % **, parentheses, and round(), min(), max(), abs().
-                Variables, text, and any other functions are not allowed: write the numbers in."""
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "expression": {
-                    "type": "string",
-                    "description": (
-                        "Arithmetic expression using only numbers, e.g. '2000 - (1700 + 129.99)' "
-                        "or '(54.99 - 42.50) * 2'."
-                    ),
-                },
+    "name": "calculator",
+    "description": (
+        """Evaluate an arithmetic expression and return the result rounded to 2 decimal places.
+            ALWAYS use this tool for any arithmetic; never compute numbers in your head,
+            not even simple sums or differences.
+            Use it for, e.g.: totals of several prices, how much more a customer must
+            spend to reach premier status, how much a discount or a cheaper product saves,
+            or how many days a product will last.
+            Supports numbers, + - * / // % **, parentheses, and round(), min(), max(), abs().
+            Variables, text, and any other functions are not allowed: write the numbers in."""
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "expression": {
+                "type": "string",
+                "description": (
+                    "Arithmetic expression using only numbers, e.g. '2000 - (1700 + 129.99)' "
+                    "or '(54.99 - 42.50) * 2'."
+                ),
             },
-            "required": ["expression"],
-            "additionalProperties": False,
         },
+        "required": ["expression"],
+        "additionalProperties": False,
     },
+    "strict": False,
 }
 
 

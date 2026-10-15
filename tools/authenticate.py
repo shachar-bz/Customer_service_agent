@@ -12,29 +12,28 @@ INVALID_CREDENTIALS_MESSAGE = "Invalid email or password."
 
 AUTHENTICATE_SCHEMA = {
     "type": "function",
-    "function": {
-        "name": "authenticate",
-        "description": (
-            """Verify a customer's identity with their email and password.
-                Returns the customer's full name and status (regular or premier).
-                Call this whenever the customer provides their credentials."""
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "description": "Customer email address, e.g. rob.brown@email.net.",
-                },
-                "pw": {
-                    "type": "string",
-                    "description": "Customer password exactly as the customer wrote it.",
-                },
+    "name": "authenticate",
+    "description": (
+        """Verify a customer's identity with their email and password.
+            Returns the customer's full name and status (regular or premier).
+            Call this whenever the customer provides their credentials."""
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "email": {
+                "type": "string",
+                "description": "Customer email address, e.g. rob.brown@email.net.",
             },
-            "required": ["email", "pw"],
-            "additionalProperties": False,
+            "pw": {
+                "type": "string",
+                "description": "Customer password exactly as the customer wrote it.",
+            },
         },
+        "required": ["email", "pw"],
+        "additionalProperties": False,
     },
+    "strict": False,
 }
 
 
