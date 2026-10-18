@@ -15,7 +15,6 @@ from tools.search_products.pipeline import RETRIEVAL_CANDIDATE_COUNT, SEARCH_RES
 from tools.search_products.reranker import RERANK_QUESTION_NAME, ProductRerankError, ProductReranker
 from tools.search_products.tool import (
     NO_RESULTS_NOTE,
-    RERANK_UNAVAILABLE_NOTE,
     SearchProductsArgs,
     search_products,
 )
@@ -162,7 +161,7 @@ def test_falls_back_to_vector_order_when_rerank_fails(decisions_client):
     result = tool(query="scale")
 
     assert returned_ids(result) == CANDIDATE_IDS[:SEARCH_RESULT_COUNT]
-    assert result["note"] == RERANK_UNAVAILABLE_NOTE
+    assert "note" not in result
 
 
 def test_refusal_raises_rerank_error():

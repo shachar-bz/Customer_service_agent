@@ -10,9 +10,6 @@ from pricing.customer_pricing import priced_product_view
 from tools.search_products.pipeline import SEARCH_RESULT_COUNT, ProductSearcher
 
 NO_RESULTS_NOTE = "No products found for this query."
-RERANK_UNAVAILABLE_NOTE = (
-    "Relevance reranking was unavailable; products are ordered by semantic similarity only."
-)
 
 SEARCH_PRODUCTS_SCHEMA = {
     "type": "function",
@@ -73,6 +70,4 @@ def search_products(
     }
     if not search_outcome.ranked_products:
         result["note"] = NO_RESULTS_NOTE
-    elif not search_outcome.reranked:
-        result["note"] = RERANK_UNAVAILABLE_NOTE
     return result
