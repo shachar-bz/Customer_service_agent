@@ -20,10 +20,10 @@ SEARCH_PRODUCTS_SCHEMA = {
     "description": (
         f"""Semantic search over the product catalog. Use it for natural-language needs
             ("something to keep my coffee hot on the go") and "something like X" requests.
-            Returns the {SEARCH_RESULT_COUNT} most relevant products, most relevant first, each
-            with a relevance_probability. It does not enforce hard constraints (price, brand,
-            category, availability): use filter_products for those, and check the returned
-            fields (e.g. available, customer_price) before recommending.
+            Returns the {SEARCH_RESULT_COUNT} most relevant products, most relevant first.
+            It does not enforce hard constraints (price, brand, category, availability):
+            use filter_products for those, and check the returned fields
+            (e.g. available, customer_price) before recommending.
             Prices include the premier discount for a premier customer."""
     ),
     "parameters": {
@@ -67,10 +67,7 @@ def search_products(
     discount_rate = session.discount_rate
     result: dict[str, Any] = {
         "products": [
-            {
-                **priced_product_view(ranked.product, discount_rate).model_dump(),
-                "relevance_probability": ranked.relevance_probability,
-            }
+            priced_product_view(ranked.product, discount_rate).model_dump()
             for ranked in search_outcome.ranked_products
         ],
     }

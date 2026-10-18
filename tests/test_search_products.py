@@ -120,8 +120,8 @@ def test_makes_one_predicate_call_per_candidate_and_returns_top_ten_by_probabili
     assert product_index.requested_top_k == RETRIEVAL_CANDIDATE_COUNT
     assert len(decisions_client.create_calls) == RETRIEVAL_CANDIDATE_COUNT
     assert returned_ids(result) == list(reversed(CANDIDATE_IDS))[:SEARCH_RESULT_COUNT]
-    assert result["products"][0]["relevance_probability"] == probability_by_id["product_14"]
     assert "note" not in result
+    assert all("relevance_probability" not in product for product in result["products"])
 
     assert all(call["questions"][0]["type"] == "predicate" for call in decisions_client.create_calls)
     assert all("scale with lbs and kg" in call["input"] for call in decisions_client.create_calls)
@@ -146,7 +146,6 @@ def test_products_scored_zero_rank_last_in_distance_order():
 
     remaining_ids = [uniq_id for uniq_id in CANDIDATE_IDS if uniq_id != "product_7"]
     assert returned_ids(result) == ["product_7"] + remaining_ids[: SEARCH_RESULT_COUNT - 1]
-    assert result["products"][1]["relevance_probability"] == 0.0
 
 
 @pytest.mark.parametrize(
@@ -163,7 +162,6 @@ def test_falls_back_to_vector_order_when_rerank_fails(decisions_client):
     result = tool(query="scale")
 
     assert returned_ids(result) == CANDIDATE_IDS[:SEARCH_RESULT_COUNT]
-    assert all(product["relevance_probability"] is None for product in result["products"])
     assert result["note"] == RERANK_UNAVAILABLE_NOTE
 
 
