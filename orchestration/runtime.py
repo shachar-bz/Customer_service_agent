@@ -9,8 +9,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from data_init.store_data import StoreData, load_store_data
-from orchestration.agent import run_agent
-from orchestration.logger import AgentRun
+from orchestration.agent import AgentRun, run_agent
 from orchestration.session import ConversationSession
 from orchestration.tool_registry import build_tool_registry
 from tools.search_products import ProductReranker, ProductSearcher, create_decisions_client

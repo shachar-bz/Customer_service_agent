@@ -17,7 +17,8 @@ def test_import_is_cheap():
 
 
 def test_failure_returns_apology_instead_of_raising(monkeypatch):
-    import orchestration.agent
+    import orchestration.entrypoint
+    import orchestration.logger
     import orchestration.runtime
     from hw4 import answer_question
 
@@ -26,6 +27,6 @@ def test_failure_returns_apology_instead_of_raising(monkeypatch):
 
     monkeypatch.setattr(orchestration.runtime, "run_customer_service_agent", failing_run)
     # Keeps this test's failure out of the real agent.log.
-    monkeypatch.setattr(orchestration.agent.agent_logger, "handlers", [logging.NullHandler()])
+    monkeypatch.setattr(orchestration.logger.agent_logger, "handlers", [logging.NullHandler()])
 
-    assert answer_question("anything") == orchestration.agent.FAILURE_ANSWER
+    assert answer_question("anything") == orchestration.entrypoint.FAILURE_ANSWER

@@ -4,7 +4,7 @@ Import-safe: data, vector index and clients load lazily on the first call.
 """
 from __future__ import annotations
 
-from orchestration.agent import answer_question
+from orchestration.entrypoint import answer_question
 
 __all__ = ["answer_question"]
 

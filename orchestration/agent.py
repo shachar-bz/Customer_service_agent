@@ -1,27 +1,17 @@
-"""Customer-service agent: answer_question entry point and the OpenAI Responses API tool-calling loop.
-
-Import-safe: heavy modules (data, vector index, tools, OpenAI) load on the first question.
-"""
+"""Customer-service agent loop: Responses API tool-calling with LLM/TOOL caps. Returns an AgentRun; knows nothing about logging or wiring."""
 from __future__ import annotations
 
 import json
-import logging
 import time
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Optional
 
-from orchestration.logger import AgentRun, ToolCallRecord, format_agent_run
 from orchestration.prompt import SYSTEM_PROMPT
 
 if TYPE_CHECKING:
     from openai import OpenAI
 
     from orchestration.tool_registry import ToolRegistry
-
-AGENT_LOG_PATH = Path(__file__).resolve().parent.parent / "agent.log"
-FAILURE_ANSWER = (
-    "Sorry, something went wrong while answering your question. Please try again later."
-)
 
 AGENT_MODEL = "gpt-6.1-sol"
 REASONING_EFFORT = "medium"
@@ -41,34 +31,25 @@ FORCED_ANSWER_INSTRUCTION = (
     f"{CAP_REACHED_APOLOGY}"
 )
 
-agent_logger = logging.getLogger("customer_service_agent")
+
+@dataclass(frozen=True)
+class ToolCallRecord:
+    tool_name: str
+    raw_arguments_json: str
+    result: dict[str, Any]
+    error: Optional[str]
+    latency_ms: float
 
 
-def _ensure_agent_log_handler() -> None:
-    if agent_logger.handlers:
-        return
-    file_handler = logging.FileHandler(AGENT_LOG_PATH, encoding="utf-8")
-    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s\n%(message)s\n"))
-    agent_logger.addHandler(file_handler)
-    agent_logger.setLevel(logging.INFO)
-    agent_logger.propagate = False
-
-
-def answer_question(question: str) -> str:
-    """Never raises: any failure is logged and answered with FAILURE_ANSWER.
-    Every run's trace (tool calls, arguments, results, errors, latency, final answer) goes to agent.log."""
-    _ensure_agent_log_handler()
-    try:
-        # Imported here: runtime loads the heavy modules and itself imports run_agent from this module.
-        from orchestration.runtime import run_customer_service_agent
-
-        agent_run = run_customer_service_agent(question)
-    except Exception:
-        agent_logger.exception("QUESTION: %s\nanswer_question failed", question)
-        return FAILURE_ANSWER
-
-    agent_logger.info(format_agent_run(agent_run))
-    return agent_run.final_answer
+@dataclass
+class AgentRun:
+    question: str
+    final_answer: str = ""
+    tool_calls: list[ToolCallRecord] = field(default_factory=list)
+    llm_call_count: int = 0
+    # True when LLM_CAP or TOOL_CAP forced the final answer.
+    stopped_by_cap: bool = False
+    total_latency_ms: float = 0.0
 
 
 def _elapsed_ms(start_time: float) -> float:

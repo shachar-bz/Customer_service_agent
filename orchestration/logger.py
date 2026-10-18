@@ -1,29 +1,25 @@
-"""Debug trace of one agent run: every tool call (args, result, error, latency) and the final answer."""
+"""Debug logging for us: configures agent.log and writes each run's trace (tool calls, args, results, errors, latency, answer) or failure."""
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-from typing import Any, Optional
+import logging
+from pathlib import Path
+
+from orchestration.agent import AgentRun
+
+AGENT_LOG_PATH = Path(__file__).resolve().parent.parent / "agent.log"
+
+agent_logger = logging.getLogger("customer_service_agent")
 
 
-@dataclass(frozen=True)
-class ToolCallRecord:
-    tool_name: str
-    raw_arguments_json: str
-    result: dict[str, Any]
-    error: Optional[str]
-    latency_ms: float
-
-
-@dataclass
-class AgentRun:
-    question: str
-    final_answer: str = ""
-    tool_calls: list[ToolCallRecord] = field(default_factory=list)
-    llm_call_count: int = 0
-    # True when LLM_CAP or TOOL_CAP forced the final answer.
-    stopped_by_cap: bool = False
-    total_latency_ms: float = 0.0
+def ensure_agent_log_handler() -> None:
+    if agent_logger.handlers:
+        return
+    file_handler = logging.FileHandler(AGENT_LOG_PATH, encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s\n%(message)s\n"))
+    agent_logger.addHandler(file_handler)
+    agent_logger.setLevel(logging.INFO)
+    agent_logger.propagate = False
 
 
 def format_agent_run(agent_run: AgentRun) -> str:
@@ -44,3 +40,14 @@ def format_agent_run(agent_run: AgentRun) -> str:
         lines.append(f"      RESULT: {json.dumps(tool_call.result, ensure_ascii=False)}")
     lines.append(f"FINAL ANSWER: {agent_run.final_answer}")
     return "\n".join(lines)
+
+
+def log_agent_run(agent_run: AgentRun) -> None:
+    ensure_agent_log_handler()
+    agent_logger.info(format_agent_run(agent_run))
+
+
+def log_failure(question: str) -> None:
+    """Call from an except block: records the active exception's traceback."""
+    ensure_agent_log_handler()
+    agent_logger.exception("QUESTION: %s\nanswer_question failed", question)
