@@ -51,21 +51,40 @@ class FakeProductIndex:
 
 
 class FakeDecisionsClient:
-    """Stands in for OpenAI(); returns a fixed answer list, or raises."""
+    """Stands in for OpenAI(); answers each per-product predicate call from probability_by_id
+    (products missing from it get 0.0), or refuses / raises."""
 
-    def __init__(self, answers: list[dict] | None = None, error: Exception | None = None) -> None:
-        self.answers = answers
+    def __init__(
+        self,
+        probability_by_id: dict[str, float] | None = None,
+        refuse: bool = False,
+        error: Exception | None = None,
+    ) -> None:
+        self.probability_by_id = probability_by_id or {}
+        self.refuse = refuse
         self.error = error
-        self.create_kwargs = None
+        self.create_calls: list[dict] = []
         self.decisions = SimpleNamespace(create=self.create)
 
     def create(self, **create_kwargs) -> Decision:
-        self.create_kwargs = create_kwargs
+        self.create_calls.append(create_kwargs)
         if self.error is not None:
             raise self.error
+        if self.refuse:
+            answer = {"type": "refusal", "name": RERANK_QUESTION_NAME}
+        else:
+            probability = next(
+                (
+                    probability
+                    for uniq_id, probability in self.probability_by_id.items()
+                    if f"Name: Item {uniq_id}." in create_kwargs["input"]
+                ),
+                0.0,
+            )
+            answer = {"type": "predicate", "name": RERANK_QUESTION_NAME, "probability": probability}
         return Decision.model_validate(
             {
-                "answers": self.answers,
+                "answers": [answer],
                 "model": "gpt-6-luna",
                 "usage": {
                     "input_tokens": 1,
@@ -76,20 +95,6 @@ class FakeDecisionsClient:
                 },
             }
         )
-
-
-def choice_answer(probability_by_id: dict[str, float]) -> dict:
-    best_id = max(probability_by_id, key=probability_by_id.get)
-    return {
-        "type": "choice",
-        "name": RERANK_QUESTION_NAME,
-        "choice": best_id,
-        "confidence": probability_by_id[best_id],
-        "probabilities": [
-            {"value": uniq_id, "probability": probability}
-            for uniq_id, probability in probability_by_id.items()
-        ],
-    }
 
 
 def build_search_tool(decisions_client: FakeDecisionsClient, session=None, uniq_ids=CANDIDATE_IDS):
@@ -104,28 +109,38 @@ def returned_ids(result: dict) -> list[str]:
     return [product["product_id"] for product in result["products"]]
 
 
-def test_reranks_fifteen_candidates_and_returns_top_ten_by_probability():
+def test_makes_one_predicate_call_per_candidate_and_returns_top_ten_by_probability():
     # Reverse of retrieval order: the last retrieved candidate is the most relevant.
     probability_by_id = {uniq_id: (position + 1) / 120 for position, uniq_id in enumerate(CANDIDATE_IDS)}
-    decisions_client = FakeDecisionsClient(answers=[choice_answer(probability_by_id)])
+    decisions_client = FakeDecisionsClient(probability_by_id=probability_by_id)
     tool, product_index = build_search_tool(decisions_client)
 
     result = execute_tool(SearchProductsArgs, tool, {"query": "  scale with lbs and kg "})
 
     assert product_index.requested_top_k == RETRIEVAL_CANDIDATE_COUNT
+    assert len(decisions_client.create_calls) == RETRIEVAL_CANDIDATE_COUNT
     assert returned_ids(result) == list(reversed(CANDIDATE_IDS))[:SEARCH_RESULT_COUNT]
     assert result["products"][0]["relevance_probability"] == probability_by_id["product_14"]
     assert "note" not in result
 
-    question = decisions_client.create_kwargs["questions"][0]
-    assert question["type"] == "choice"
-    assert [choice["value"] for choice in question["choices"]] == CANDIDATE_IDS
-    assert "scale with lbs and kg" in decisions_client.create_kwargs["input"]
+    assert all(call["questions"][0]["type"] == "predicate" for call in decisions_client.create_calls)
+    assert all("scale with lbs and kg" in call["input"] for call in decisions_client.create_calls)
 
 
-def test_products_missing_from_the_answer_rank_last_in_retrieval_order():
-    decisions_client = FakeDecisionsClient(answers=[choice_answer({"product_7": 0.9})])
-    tool, _ = build_search_tool(decisions_client)
+def test_tie_at_the_cutoff_goes_to_the_smaller_cosine_distance():
+    # Candidates are in distance order (product_0 closest). Top 9 are clear; 10th-12th tie.
+    probability_by_id = {f"product_{position}": 0.9 for position in range(9)}
+    probability_by_id.update({"product_14": 0.5, "product_12": 0.5, "product_10": 0.5})
+    tool, _ = build_search_tool(FakeDecisionsClient(probability_by_id=probability_by_id))
+
+    result = tool(query="scale")
+
+    assert returned_ids(result)[-1] == "product_10"
+    assert "product_12" not in returned_ids(result)
+
+
+def test_products_scored_zero_rank_last_in_distance_order():
+    tool, _ = build_search_tool(FakeDecisionsClient(probability_by_id={"product_7": 0.9}))
 
     result = tool(query="scale")
 
@@ -138,7 +153,7 @@ def test_products_missing_from_the_answer_rank_last_in_retrieval_order():
     "decisions_client",
     [
         FakeDecisionsClient(error=openai.APIConnectionError(request=httpx.Request("POST", "https://x"))),
-        FakeDecisionsClient(answers=[{"type": "refusal", "name": RERANK_QUESTION_NAME}]),
+        FakeDecisionsClient(refuse=True),
     ],
     ids=["api_error", "refusal"],
 )
@@ -153,13 +168,13 @@ def test_falls_back_to_vector_order_when_rerank_fails(decisions_client):
 
 
 def test_refusal_raises_rerank_error():
-    reranker = ProductReranker(FakeDecisionsClient(answers=[{"type": "refusal", "name": RERANK_QUESTION_NAME}]))
+    reranker = ProductReranker(FakeDecisionsClient(refuse=True))
     with pytest.raises(ProductRerankError):
         reranker.rerank("scale", [make_product("a")])
 
 
 def test_premier_customer_sees_discounted_customer_price():
-    decisions_client = FakeDecisionsClient(answers=[choice_answer({"product_0": 1.0})])
+    decisions_client = FakeDecisionsClient(probability_by_id={"product_0": 1.0})
     tool, _ = build_search_tool(decisions_client, session=ConversationSession(is_premier=True))
 
     result = tool(query="scale")
@@ -168,7 +183,7 @@ def test_premier_customer_sees_discounted_customer_price():
 
 
 def test_empty_index_returns_note():
-    decisions_client = FakeDecisionsClient(answers=[{"type": "refusal", "name": RERANK_QUESTION_NAME}])
+    decisions_client = FakeDecisionsClient(refuse=True)
     tool, _ = build_search_tool(decisions_client, uniq_ids=[])
 
     result = tool(query="scale")
@@ -179,5 +194,5 @@ def test_empty_index_returns_note():
 
 @pytest.mark.parametrize("raw_args", [{"query": "   "}, {}, {"query": "scale", "top_k": 3}])
 def test_invalid_arguments_return_error(raw_args):
-    tool, _ = build_search_tool(FakeDecisionsClient(answers=[]))
+    tool, _ = build_search_tool(FakeDecisionsClient())
     assert "error" in execute_tool(SearchProductsArgs, tool, raw_args)

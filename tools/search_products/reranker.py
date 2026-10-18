@@ -1,7 +1,8 @@
-"""Reranks retrieved products against a shopping need with one OpenAI Decisions API choice question."""
+"""Reranks retrieved products against a shopping need with one OpenAI Decisions API predicate question per product."""
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
@@ -12,9 +13,9 @@ from data_init.product_index import product_embedding_text
 
 DECISIONS_MODEL = "gpt-6-luna"
 DECISIONS_API_KEY_ENV_VAR = "OPENAI_APY_KEY_DECISIONS"
-RERANK_QUESTION_NAME = "best_matching_product"
+RERANK_QUESTION_NAME = "product_satisfies_need"
 RERANK_INSTRUCTIONS = (
-    "The input is a shopper's need. Choose the product that best satisfies it."
+    "The input is a shopper's need and one product. Does the product satisfy the need?"
 )
 
 
@@ -25,7 +26,7 @@ class ProductRerankError(Exception):
 @dataclass(frozen=True)
 class RerankedProduct:
     uniq_id: str
-    # Probability the Decisions API gave this product as the best match for the need.
+    # Probability the Decisions API gave that this product satisfies the need.
     relevance_probability: float
 
 
@@ -42,20 +43,22 @@ class ProductReranker:
         self._decisions_client = decisions_client
 
     def rerank(self, query: str, candidates: list[Product]) -> list[RerankedProduct]:
-        """Returns every candidate, most relevant first. Ties (and products the answer omits,
-        scored 0) keep their incoming retrieval order."""
+        """Scores every candidate with its own predicate call (run in parallel).
+        Returns scores in the incoming candidate order; the caller does the final ordering."""
+        if not candidates:
+            return []
+        with ThreadPoolExecutor(max_workers=len(candidates)) as executor:
+            return list(executor.map(lambda product: self._score_product(query, product), candidates))
+
+    def _score_product(self, query: str, product: Product) -> RerankedProduct:
         decision = self._decisions_client.decisions.create(
             model=DECISIONS_MODEL,
-            input=f"Shopper need: {query}",
+            input=f"Shopper need: {query}\n\nProduct: {product_embedding_text(product)}",
             questions=[
                 {
-                    "type": "choice",
+                    "type": "predicate",
                     "name": RERANK_QUESTION_NAME,
                     "instructions": RERANK_INSTRUCTIONS,
-                    "choices": [
-                        {"value": product.uniq_id, "description": product_embedding_text(product)}
-                        for product in candidates
-                    ],
                 }
             ],
         )
@@ -63,19 +66,7 @@ class ProductReranker:
             (answer for answer in decision.answers if answer.name == RERANK_QUESTION_NAME),
             None,
         )
-        if answer is None or answer.type != "choice":
+        if answer is None or answer.type != "predicate":
             answer_type = "no answer" if answer is None else answer.type
-            raise ProductRerankError(f"Expected a choice answer, got {answer_type}.")
-
-        probability_by_id = {
-            str(choice_probability.value): choice_probability.probability
-            for choice_probability in answer.probabilities
-        }
-        reranked_products = [
-            RerankedProduct(
-                uniq_id=product.uniq_id,
-                relevance_probability=probability_by_id.get(product.uniq_id, 0.0),
-            )
-            for product in candidates
-        ]
-        return sorted(reranked_products, key=lambda reranked: -reranked.relevance_probability)
+            raise ProductRerankError(f"Expected a predicate answer, got {answer_type}.")
+        return RerankedProduct(uniq_id=product.uniq_id, relevance_probability=answer.probability)

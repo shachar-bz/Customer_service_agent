@@ -42,6 +42,7 @@ class ProductSearcher:
         """Falls back to vector order when the rerank call fails, so the agent still gets results."""
         matches = self._product_index.search(query, top_k=RETRIEVAL_CANDIDATE_COUNT)
         candidates = [self._products_by_id[match.uniq_id] for match in matches]
+        distance_by_id = {match.uniq_id: match.distance for match in matches}
         if not candidates:
             return ProductSearchOutcome(ranked_products=[], reranked=True)
 
@@ -56,6 +57,11 @@ class ProductSearcher:
                 reranked=False,
             )
 
+        # Equal probabilities (including at the top-10 cutoff) go to the smaller cosine distance.
+        reranked_products = sorted(
+            reranked_products,
+            key=lambda reranked: (-reranked.relevance_probability, distance_by_id[reranked.uniq_id]),
+        )
         return ProductSearchOutcome(
             ranked_products=[
                 RankedProduct(
