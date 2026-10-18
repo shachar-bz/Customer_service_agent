@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 from types import SimpleNamespace
 
@@ -155,13 +156,15 @@ def test_products_scored_zero_rank_last_in_distance_order():
     ],
     ids=["api_error", "refusal"],
 )
-def test_falls_back_to_vector_order_when_rerank_fails(decisions_client):
+def test_falls_back_to_vector_order_when_rerank_fails(decisions_client, caplog):
     tool, _ = build_search_tool(decisions_client)
 
-    result = tool(query="scale")
+    with caplog.at_level(logging.WARNING, logger="customer_service_agent"):
+        result = tool(query="scale")
 
     assert returned_ids(result) == CANDIDATE_IDS[:SEARCH_RESULT_COUNT]
     assert "note" not in result
+    assert "Rerank failed" in caplog.text and "query='scale'" in caplog.text
 
 
 def test_refusal_raises_rerank_error():

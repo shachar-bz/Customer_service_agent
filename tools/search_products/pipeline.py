@@ -1,6 +1,7 @@
 """Semantic product search: retrieve candidates from the vector index, then rerank them with the Decisions API."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
@@ -12,6 +13,9 @@ from tools.search_products.reranker import ProductReranker, ProductRerankError
 
 RETRIEVAL_CANDIDATE_COUNT = 15
 SEARCH_RESULT_COUNT = 10
+
+# Same logger orchestration/logger.py writes agent.log with; looked up by name to avoid importing orchestration.
+agent_logger = logging.getLogger("customer_service_agent")
 
 
 @dataclass(frozen=True)
@@ -48,7 +52,13 @@ class ProductSearcher:
 
         try:
             reranked_products = self._product_reranker.rerank(query, candidates)
-        except (OpenAIError, ProductRerankError):
+        except (OpenAIError, ProductRerankError) as rerank_error:
+            agent_logger.warning(
+                "Rerank failed, falling back to vector order. query=%r error=%s: %s",
+                query,
+                type(rerank_error).__name__,
+                rerank_error,
+            )
             return ProductSearchOutcome(
                 ranked_products=[
                     RankedProduct(product=product, relevance_probability=None)
