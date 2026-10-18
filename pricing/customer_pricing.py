@@ -6,11 +6,14 @@ from pydantic import BaseModel
 from data_init.product_catalog import Product
 
 PREMIER_DISCOUNT_RATE = 0.05
+# Caps tool-output tokens while keeping key facts (size, usage) from the description.
+MAX_DESCRIPTION_CHARS = 600
 
 
 class PricedProduct(BaseModel):
     product_id: str
     name: str
+    description: str
     brand: str
     category: str
     list_price: float
@@ -29,6 +32,7 @@ def priced_product_view(product: Product, discount_rate: float) -> PricedProduct
     return PricedProduct(
         product_id=product.uniq_id,
         name=product.name,
+        description=product.description[:MAX_DESCRIPTION_CHARS],
         brand=product.brand,
         category=product.category,
         list_price=product.list_price,

@@ -1,12 +1,17 @@
 from data_init.product_catalog import Product
-from pricing.customer_pricing import PREMIER_DISCOUNT_RATE, customer_price, priced_product_view
+from pricing.customer_pricing import (
+    MAX_DESCRIPTION_CHARS,
+    PREMIER_DISCOUNT_RATE,
+    customer_price,
+    priced_product_view,
+)
 
 
-def make_product(list_price: float, sale_price: float) -> Product:
+def make_product(list_price: float, sale_price: float, description: str = "") -> Product:
     return Product(
         uniq_id="p1",
         name="Scale",
-        description="",
+        description=description,
         list_price=list_price,
         sale_price=sale_price,
         brand="Acme",
@@ -34,3 +39,10 @@ def test_priced_view_exposes_both_prices():
     assert view.on_sale
     assert view.customer_price == 98.8
     assert view.available
+
+
+def test_priced_view_truncates_long_description():
+    long_description = "x" * (MAX_DESCRIPTION_CHARS + 50)
+    view = priced_product_view(make_product(120.0, 104.0, long_description), 0.0)
+
+    assert view.description == "x" * MAX_DESCRIPTION_CHARS
