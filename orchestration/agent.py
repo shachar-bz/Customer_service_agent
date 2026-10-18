@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from orchestration.agent_trace import AgentRun, ToolCallRecord, format_agent_run
+from orchestration.logger import AgentRun, ToolCallRecord, format_agent_run
 from orchestration.prompt import SYSTEM_PROMPT
 
 if TYPE_CHECKING:
