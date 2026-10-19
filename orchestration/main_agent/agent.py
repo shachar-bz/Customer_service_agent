@@ -41,8 +41,11 @@ class ToolCallRecord:
     tool_name: str
     raw_arguments_json: str
     result: dict[str, Any]
-    error: Optional[str]
     latency_ms: float
+
+    @property
+    def error(self) -> Optional[str]:
+        return self.result.get("error")
 
 
 @dataclass
@@ -83,7 +86,6 @@ def _run_tool_call(registry: ToolRegistry, function_call: Any, agent_run: AgentR
             tool_name=function_call.name,
             raw_arguments_json=function_call.arguments,
             result=tool_result,
-            error=tool_result.get("error"),
             latency_ms=latency_ms,
         )
     )

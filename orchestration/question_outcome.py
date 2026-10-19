@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class QuestionOutcome:
     agent_run: AgentRun
-    # Always present: a capped run gets one with skipped_reason set.
+    # Always present: a capped run gets one with no fast validation.
     response_validation: ResponseValidation
 
     @property

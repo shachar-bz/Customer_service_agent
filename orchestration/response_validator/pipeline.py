@@ -9,8 +9,6 @@ from orchestration.response_validator.fast_validator import FastValidationResult
 from orchestration.response_validator.response_context import collect_retrieved_products
 from orchestration.response_validator.reviewer import ResponseReview
 
-SKIPPED_STOPPED_BY_CAP = "stopped_by_cap: no budget left to repair"
-
 # (question, answer, retrieved products) -> fast validation; e.g. run_fast_validation with its client bound.
 FastValidate = Callable[[str, str, list[dict[str, Any]]], FastValidationResult]
 # (question, answer, flagged label, probabilities) -> review; e.g. review_response with its client bound.
@@ -21,7 +19,6 @@ ReviewResponse = Callable[[str, str, str, dict[str, float]], ResponseReview]
 class ResponseValidation:
     # The answer the customer gets: the agent's answer, or the repaired one.
     final_answer: str
-    skipped_reason: Optional[str] = None
     fast_validation: Optional[FastValidationResult] = None
     review: Optional[ResponseReview] = None
     # The agent's first answer, kept only when a repair pass replaced it.
@@ -41,8 +38,8 @@ def validate_response(
     the repaired answer; if anything fails, final_answer stays the agent's original answer."""
     original_answer = agent_run.final_answer
     response_validation = ResponseValidation(final_answer=original_answer)
+    # A capped run is not validated: no budget is left to repair it.
     if agent_run.stopped_by_cap:
-        response_validation.skipped_reason = SKIPPED_STOPPED_BY_CAP
         return response_validation
 
     try:

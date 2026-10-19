@@ -36,8 +36,6 @@ def format_question_outcome(question_outcome: QuestionOutcome) -> str:
             f"  [{call_number}] {tool_call.tool_name}({tool_call.raw_arguments_json}) "
             f"{tool_call.latency_ms:.0f}ms"
         )
-        if tool_call.error is not None:
-            lines.append(f"      ERROR: {tool_call.error}")
         lines.append(f"      RESULT: {json.dumps(tool_call.result, ensure_ascii=False)}")
     lines.extend(format_response_validation(question_outcome))
     lines.append(f"FINAL ANSWER: {question_outcome.final_answer}")
@@ -47,8 +45,8 @@ def format_question_outcome(question_outcome: QuestionOutcome) -> str:
 def format_response_validation(question_outcome: QuestionOutcome) -> list[str]:
     response_validation = question_outcome.response_validation
     lines = ["RESPONSE VALIDATION:"]
-    if response_validation.skipped_reason is not None:
-        lines.append(f"  skipped: {response_validation.skipped_reason}")
+    if question_outcome.agent_run.stopped_by_cap:
+        lines.append("  skipped: stopped_by_cap, no budget left to repair")
     fast_validation = response_validation.fast_validation
     if fast_validation is not None:
         lines.append(

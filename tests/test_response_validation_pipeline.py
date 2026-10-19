@@ -2,7 +2,7 @@ from orchestration.main_agent.agent import AgentRun
 from orchestration.logger import format_question_outcome
 from orchestration.question_outcome import QuestionOutcome
 from orchestration.response_validator.fast_validator import FastValidationResult
-from orchestration.response_validator.pipeline import SKIPPED_STOPPED_BY_CAP, validate_response
+from orchestration.response_validator.pipeline import validate_response
 from orchestration.response_validator.reviewer import ResponseReview, ResponseReviewVerdict
 
 
@@ -100,7 +100,7 @@ def test_capped_run_is_not_validated():
     question_outcome, _ = run_pipeline(fast_validator, FakeReviewer(), stopped_by_cap=True)
 
     assert fast_validator.calls == 0
-    assert question_outcome.response_validation.skipped_reason == SKIPPED_STOPPED_BY_CAP
+    assert question_outcome.response_validation.fast_validation is None
     assert question_outcome.final_answer == "original"
 
 

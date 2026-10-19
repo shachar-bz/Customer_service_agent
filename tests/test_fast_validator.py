@@ -97,13 +97,12 @@ def tool_call_with_products(*product_ids):
         tool_name="search_products",
         raw_arguments_json="{}",
         result={"products": [{"product_id": product_id, "name": product_id} for product_id in product_ids]},
-        error=None,
         latency_ms=0.0,
     )
 
 
 def test_collects_products_once_in_retrieval_order():
-    calculator_call = ToolCallRecord("calculator", "{}", {"result": 2}, None, 0.0)
+    calculator_call = ToolCallRecord("calculator", "{}", {"result": 2}, 0.0)
     tool_calls = [tool_call_with_products("a", "b"), calculator_call, tool_call_with_products("b", "c")]
 
     products = collect_retrieved_products(tool_calls)
