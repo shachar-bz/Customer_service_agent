@@ -6,6 +6,7 @@ from orchestration.agent import (
     LLM_CAP,
     TOOL_BUDGET_EXHAUSTED_MESSAGE,
     TOOL_CAP,
+    repair_agent_answer,
     run_agent,
 )
 from orchestration.tool_registry import RegisteredTool, ToolRegistry
@@ -128,3 +129,32 @@ def test_empty_forced_answer_falls_back_to_apology():
     agent_run = run_agent("q", calculator_registry(), agent_client)
 
     assert agent_run.final_answer == CAP_REACHED_APOLOGY
+
+
+def test_repair_resumes_transcript_with_review_feedback():
+    agent_client = FakeAgentClient([answer_response("first"), answer_response("fixed")])
+    registry = calculator_registry()
+    agent_run = run_agent("q", registry, agent_client)
+
+    repair_agent_answer(agent_run, registry, agent_client, "- drop product X")
+
+    assert agent_run.final_answer == "fixed"
+    assert agent_run.llm_call_count == 2
+    repair_input = agent_client.requests[1]["input"]
+    assert repair_input[0] == {"role": "user", "content": "q"}
+    assert repair_input[-1]["role"] == "developer"
+    assert "- drop product X" in repair_input[-1]["content"]
+
+
+def test_repair_only_gets_leftover_llm_budget():
+    first_run_calls = [tool_response(function_call(f"call_{index}")) for index in range(LLM_CAP - 2)]
+    agent_client = FakeAgentClient([*first_run_calls, answer_response("first")], forced_answer="forced fix")
+    registry = calculator_registry()
+    agent_run = run_agent("q", registry, agent_client)
+    assert agent_run.llm_call_count == LLM_CAP - 1
+
+    repair_agent_answer(agent_run, registry, agent_client, "fix it")
+
+    assert agent_run.llm_call_count == LLM_CAP
+    assert agent_client.requests[-1]["tool_choice"] == "none"
+    assert agent_run.final_answer == "forced fix"

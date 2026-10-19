@@ -1,4 +1,4 @@
-"""Customer-service agent loop: Responses API tool-calling with LLM/TOOL caps. Returns an AgentRun; knows nothing about logging or wiring."""
+"""Customer-service agent loop: Responses API tool-calling with LLM/TOOL caps. Returns an AgentRun whose transcript can be resumed for a repair pass; knows nothing about logging or wiring."""
 from __future__ import annotations
 
 import json
@@ -11,6 +11,7 @@ from orchestration.prompt import SYSTEM_PROMPT
 if TYPE_CHECKING:
     from openai import OpenAI
 
+    from orchestration.response_validator.pipeline import ResponseValidation
     from orchestration.tool_registry import ToolRegistry
 
 AGENT_MODEL = "gpt-6.1-sol"
@@ -29,6 +30,11 @@ FORCED_ANSWER_INSTRUCTION = (
     "You cannot call any more tools. If the tool results above are enough to answer the "
     "customer's question, answer it now. Otherwise reply with exactly this text:\n"
     f"{CAP_REACHED_APOLOGY}"
+)
+REPAIR_INSTRUCTION_TEMPLATE = (
+    "A reviewer checked your answer above and found these problems:\n{review_feedback}\n"
+    "Fix them, using tools if you need more information. Then reply with a complete corrected "
+    "answer to the customer's original message, following all your rules. Do not mention the review."
 )
 
 
@@ -50,6 +56,10 @@ class AgentRun:
     # True when LLM_CAP or TOOL_CAP forced the final answer.
     stopped_by_cap: bool = False
     total_latency_ms: float = 0.0
+    # Set by the response validation pipeline; None when it did not run.
+    response_validation: Optional[ResponseValidation] = None
+    # Responses API input items, kept (store=False) so a repair pass can resume the conversation.
+    transcript: list[Any] = field(default_factory=list, repr=False)
 
 
 def _elapsed_ms(start_time: float) -> float:
@@ -86,10 +96,28 @@ def _run_tool_call(registry: ToolRegistry, function_call: Any, agent_run: AgentR
 
 def run_agent(question: str, registry: ToolRegistry, agent_client: OpenAI) -> AgentRun:
     """One question, one answer: no conversation history beyond this call."""
-    start_time = time.perf_counter()
     agent_run = AgentRun(question=question)
+    agent_run.transcript.append({"role": "user", "content": question})
+    _continue_agent_loop(agent_run, registry, agent_client)
+    return agent_run
+
+
+def repair_agent_answer(
+    agent_run: AgentRun, registry: ToolRegistry, agent_client: OpenAI, review_feedback: str
+) -> None:
+    """Resumes the run with reviewer feedback and overwrites final_answer.
+    Only what is left of LLM_CAP and TOOL_CAP is available to the repair."""
+    agent_run.transcript.append(
+        {"role": "developer", "content": REPAIR_INSTRUCTION_TEMPLATE.format(review_feedback=review_feedback)}
+    )
+    _continue_agent_loop(agent_run, registry, agent_client)
+
+
+def _continue_agent_loop(agent_run: AgentRun, registry: ToolRegistry, agent_client: OpenAI) -> None:
+    """Runs model/tool turns on agent_run.transcript until an answer, within the run's remaining caps."""
+    start_time = time.perf_counter()
     # Kept locally (store=False): every turn resends the full transcript.
-    input_items: list[Any] = [{"role": "user", "content": question}]
+    input_items = agent_run.transcript
 
     def call_model(tool_choice: str) -> Any:
         agent_run.llm_call_count += 1
@@ -109,23 +137,20 @@ def run_agent(question: str, registry: ToolRegistry, agent_client: OpenAI) -> Ag
         return response
 
     # The last of the LLM_CAP calls is reserved for the forced answer.
-    for _ in range(LLM_CAP - 1):
+    while agent_run.llm_call_count < LLM_CAP - 1 and len(agent_run.tool_calls) < TOOL_CAP:
         response = call_model(tool_choice="auto")
         function_calls = [item for item in response.output if item.type == "function_call"]
         if not function_calls:
             agent_run.final_answer = response.output_text or CAP_REACHED_APOLOGY
-            agent_run.total_latency_ms = _elapsed_ms(start_time)
-            return agent_run
+            agent_run.total_latency_ms += _elapsed_ms(start_time)
+            return
 
         for function_call in function_calls:
             tool_result = _run_tool_call(registry, function_call, agent_run)
             input_items.append(_function_call_output(function_call.call_id, tool_result))
-        if len(agent_run.tool_calls) >= TOOL_CAP:
-            break
 
     agent_run.stopped_by_cap = True
     input_items.append({"role": "developer", "content": FORCED_ANSWER_INSTRUCTION})
     response = call_model(tool_choice="none")
     agent_run.final_answer = response.output_text or CAP_REACHED_APOLOGY
-    agent_run.total_latency_ms = _elapsed_ms(start_time)
-    return agent_run
+    agent_run.total_latency_ms += _elapsed_ms(start_time)
