@@ -27,7 +27,7 @@ class FakeReviewer:
         self._error = error
         self.calls = []
 
-    def review(self, response_context, flagged_label, probability_by_label):
+    def review(self, question, answer, flagged_label, probability_by_label):
         self.calls.append(flagged_label)
         if self._error is not None:
             raise self._error

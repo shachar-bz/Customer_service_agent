@@ -57,13 +57,13 @@ class ResponseReviewer:
         self._reviewer_client = reviewer_client
 
     def review(
-        self, response_context: str, flagged_label: str, probability_by_label: dict[str, float]
+        self, question: str, answer: str, flagged_label: str, probability_by_label: dict[str, float]
     ) -> ResponseReview:
         start_time = time.perf_counter()
         response = self._reviewer_client.responses.create(
             model=REVIEWER_MODEL,
             instructions=REVIEWER_INSTRUCTIONS,
-            input=format_reviewer_input(response_context, flagged_label, probability_by_label),
+            input=format_reviewer_input(question, answer, flagged_label, probability_by_label),
             text={"format": RESPONSE_REVIEW_TEXT_FORMAT},
             store=False,
         )

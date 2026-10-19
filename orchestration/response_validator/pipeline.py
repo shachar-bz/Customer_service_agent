@@ -6,10 +6,7 @@ from typing import Callable, Optional
 
 from orchestration.main_agent.agent import AgentRun
 from orchestration.response_validator.fast_validator import FastValidationResult, FastValidator
-from orchestration.response_validator.response_context import (
-    collect_retrieved_products,
-    format_response_context,
-)
+from orchestration.response_validator.response_context import collect_retrieved_products
 from orchestration.response_validator.reviewer import ResponseReview, ResponseReviewer
 
 SKIPPED_STOPPED_BY_CAP = "stopped_by_cap: no budget left to repair"
@@ -51,7 +48,8 @@ class ResponseValidationPipeline:
                 return response_validation
 
             review = self._response_reviewer.review(
-                format_response_context(agent_run.question, original_answer, products),
+                agent_run.question,
+                original_answer,
                 fast_validation.most_likely_label,
                 fast_validation.probability_by_label,
             )

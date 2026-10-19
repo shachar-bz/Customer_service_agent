@@ -16,7 +16,7 @@ class FlaggingFastValidator:
 
 
 class ConfirmingReviewer:
-    def review(self, response_context, flagged_label, probability_by_label):
+    def review(self, question, answer, flagged_label, probability_by_label):
         verdict = ResponseReviewVerdict(is_actually_wrong=True, problems=["4 products"], fix_instructions="Keep 3.")
         return ResponseReview(verdict=verdict, latency_ms=1.0)
 
