@@ -5,7 +5,7 @@ import pytest
 from data_init.customer_store import get_cust_data_collection
 from data_init.product_catalog import index_products_by_id, load_product_catalog
 from data_init.store_data import StoreData
-from orchestration.session import ConversationSession
+from pricing.conversation_session import ConversationSession
 from orchestration.tool_registry import (
     INVALID_ARGUMENTS_JSON_MESSAGE,
     RegisteredTool,

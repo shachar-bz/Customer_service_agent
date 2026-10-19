@@ -1,4 +1,4 @@
-"""Per-conversation state shared with the tools that need it (authenticate, price-aware tools)."""
+"""Per-conversation state (the premier flag) shared with the tools that need it: authenticate and price-aware tools. Lives in pricing/ so tools never import from orchestration/."""
 from __future__ import annotations
 
 from dataclasses import dataclass

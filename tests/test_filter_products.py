@@ -4,7 +4,7 @@ import pytest
 
 from data_init.customer_store import get_cust_data_collection
 from data_init.product_catalog import Product, load_product_catalog
-from orchestration.session import ConversationSession
+from pricing.conversation_session import ConversationSession
 from tools.authenticate import AuthenticateArgs, authenticate
 from tools.base import execute_tool
 from tools.filter_products import (

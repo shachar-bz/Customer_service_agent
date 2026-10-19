@@ -6,7 +6,7 @@ from typing import Any, Iterable, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from data_init.product_catalog import Product
-from orchestration.session import ConversationSession
+from pricing.conversation_session import ConversationSession
 from pricing.customer_pricing import customer_price, priced_product_view
 
 MAX_FILTER_RESULTS = 10

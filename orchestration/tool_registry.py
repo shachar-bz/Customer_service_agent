@@ -9,7 +9,7 @@ from typing import Any, Callable
 from pydantic import BaseModel
 
 from data_init.store_data import StoreData
-from orchestration.session import ConversationSession
+from pricing.conversation_session import ConversationSession
 from tools.authenticate import AUTHENTICATE_SCHEMA, AuthenticateArgs, authenticate
 from tools.base import execute_tool
 from tools.calculator import CALCULATOR_SCHEMA, CalculatorArgs, calculator

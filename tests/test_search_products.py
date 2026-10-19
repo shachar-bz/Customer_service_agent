@@ -8,7 +8,7 @@ import pytest
 from openai.types.decision import Decision
 
 from data_init.product_catalog import Product
-from orchestration.session import ConversationSession
+from pricing.conversation_session import ConversationSession
 from data_init.product_index import ProductSearchMatch
 from pricing.customer_pricing import PREMIER_DISCOUNT_RATE
 from tools.base import execute_tool

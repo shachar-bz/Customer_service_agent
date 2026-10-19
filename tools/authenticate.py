@@ -6,7 +6,7 @@ from typing import Any
 from mongomock.collection import Collection
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from orchestration.session import ConversationSession
+from pricing.conversation_session import ConversationSession
 
 INVALID_CREDENTIALS_MESSAGE = "Invalid email or password."
 

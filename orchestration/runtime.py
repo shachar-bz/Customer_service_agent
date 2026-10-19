@@ -13,7 +13,7 @@ from orchestration.agent import AgentRun, repair_agent_answer, run_agent
 from orchestration.response_validator.fast_validator import FastValidator
 from orchestration.response_validator.pipeline import ResponseValidationPipeline
 from orchestration.response_validator.reviewer import ResponseReviewer
-from orchestration.session import ConversationSession
+from pricing.conversation_session import ConversationSession
 from orchestration.tool_registry import build_tool_registry
 from tools.search_products import ProductReranker, ProductSearcher, create_decisions_client
 

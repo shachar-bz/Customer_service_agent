@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from orchestration.session import ConversationSession
+from pricing.conversation_session import ConversationSession
 from pricing.customer_pricing import priced_product_view
 from tools.search_products.pipeline import SEARCH_RESULT_COUNT, ProductSearcher
 
