@@ -2,9 +2,10 @@ from functools import partial
 
 import pytest
 
-from data_init.product_catalog import Product, load_product_catalog
+from data_init.product_catalog import load_product_catalog
 from pricing.conversation_session import ConversationSession
 from tools.base import execute_tool
+from tests.product_factory import make_product
 from tools.filter_products import (
     MAX_FILTER_RESULTS,
     NO_FILTER_MESSAGE,
@@ -12,26 +13,6 @@ from tools.filter_products import (
     FilterProductsArgs,
     filter_products,
 )
-
-
-def make_product(
-    uniq_id: str,
-    name: str = "Generic Item",
-    sale_price: float = 50.0,
-    brand: str = "Acme",
-    category: str = "Health | Home Health Care | Bathroom Scales | Mechanical Scales",
-    available: bool = True,
-) -> Product:
-    return Product(
-        uniq_id=uniq_id,
-        name=name,
-        description="",
-        list_price=sale_price,
-        sale_price=sale_price,
-        brand=brand,
-        category=category,
-        available=available,
-    )
 
 
 @pytest.fixture

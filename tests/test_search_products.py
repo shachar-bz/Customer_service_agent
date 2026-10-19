@@ -7,8 +7,8 @@ import openai
 import pytest
 from openai.types.decision import Decision
 
-from data_init.product_catalog import Product
 from pricing.conversation_session import ConversationSession
+from tests.product_factory import make_product
 from data_init.product_index import ProductSearchMatch
 from pricing.customer_pricing import PREMIER_DISCOUNT_RATE
 from tools.base import execute_tool
@@ -20,19 +20,6 @@ from tools.search_products.tool import (
 )
 
 CANDIDATE_IDS = [f"product_{position}" for position in range(RETRIEVAL_CANDIDATE_COUNT)]
-
-
-def make_product(uniq_id: str, sale_price: float = 100.0) -> Product:
-    return Product(
-        uniq_id=uniq_id,
-        name=f"Item {uniq_id}",
-        description="",
-        list_price=sale_price,
-        sale_price=sale_price,
-        brand="Acme",
-        category="Health | Scales",
-        available=True,
-    )
 
 
 class FakeProductIndex:
@@ -97,7 +84,7 @@ class FakeDecisionsClient:
 
 def build_search_tool(decisions_client: FakeDecisionsClient, session=None, uniq_ids=CANDIDATE_IDS):
     product_index = FakeProductIndex(uniq_ids)
-    products_by_id = {uniq_id: make_product(uniq_id) for uniq_id in uniq_ids}
+    products_by_id = {uniq_id: make_product(uniq_id, sale_price=100.0) for uniq_id in uniq_ids}
     tool = partial(
         search_products, product_index, products_by_id, decisions_client, session or ConversationSession()
     )

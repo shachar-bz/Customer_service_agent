@@ -1,7 +1,7 @@
 import chromadb
 from chromadb.config import Settings
 
-from data_init.product_catalog import Product
+from tests.product_factory import make_product
 from data_init.product_index import (
     COLLECTION_NAME_PREFIX,
     build_product_index,
@@ -9,24 +9,15 @@ from data_init.product_index import (
 )
 
 
-def make_product(uniq_id: str, name: str, category: str) -> Product:
-    return Product(
-        uniq_id=uniq_id,
-        name=name,
-        description=name,
-        list_price=10.0,
-        sale_price=10.0,
-        brand="TestBrand",
-        category=category,
-        available=True,
-    )
+def make_indexed_product(uniq_id: str, name: str, category: str):
+    return make_product(uniq_id, name=name, description=name, sale_price=10.0, brand="TestBrand", category=category)
 
 
 SAMPLE_PRODUCTS = [
-    make_product("thermometer", "Digital Forehead Thermometer", "Health | Thermometers"),
-    make_product("helmet", "Snowboard Helmet with Goggles", "Sports | Snowsports"),
-    make_product("soap", "Moisturizing Hand Soap with Aloe", "Bath & Body | Hand Soaps"),
-    make_product("scale", "Body Weight Bathroom Scale", "Health | Body Weight Scales"),
+    make_indexed_product("thermometer", "Digital Forehead Thermometer", "Health | Thermometers"),
+    make_indexed_product("helmet", "Snowboard Helmet with Goggles", "Sports | Snowsports"),
+    make_indexed_product("soap", "Moisturizing Hand Soap with Aloe", "Bath & Body | Hand Soaps"),
+    make_indexed_product("scale", "Body Weight Bathroom Scale", "Health | Body Weight Scales"),
 ]
 
 
