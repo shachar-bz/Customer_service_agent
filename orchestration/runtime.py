@@ -1,4 +1,4 @@
-"""Agent runtime: lazily loads and caches the store data and OpenAI clients, then runs one question through the agent."""
+"""Agent runtime: lazily loads and caches the store data and OpenAI clients, then runs one question through the agent and response validation."""
 from __future__ import annotations
 
 import os
@@ -9,7 +9,10 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from data_init.store_data import StoreData, load_store_data
-from orchestration.agent import AgentRun, run_agent
+from orchestration.agent import AgentRun, repair_agent_answer, run_agent
+from orchestration.response_validator.fast_validator import FastValidator
+from orchestration.response_validator.pipeline import ResponseValidationPipeline
+from orchestration.response_validator.reviewer import ResponseReviewer
 from orchestration.session import ConversationSession
 from orchestration.tool_registry import build_tool_registry
 from tools.search_products import ProductReranker, ProductSearcher, create_decisions_client
@@ -23,6 +26,7 @@ class AgentRuntime:
     store_data: StoreData
     product_searcher: ProductSearcher
     agent_client: OpenAI
+    response_validation_pipeline: ResponseValidationPipeline
 
 
 def create_agent_client() -> OpenAI:
@@ -37,15 +41,21 @@ def create_agent_client() -> OpenAI:
 def get_agent_runtime() -> AgentRuntime:
     """Built on the first question (slow: may embed the catalog). A failed build is not cached."""
     store_data = load_store_data()
+    decisions_client = create_decisions_client()
+    agent_client = create_agent_client()
     product_searcher = ProductSearcher(
         store_data.product_index,
         store_data.products_by_id,
-        ProductReranker(create_decisions_client()),
+        ProductReranker(decisions_client),
     )
     return AgentRuntime(
         store_data=store_data,
         product_searcher=product_searcher,
-        agent_client=create_agent_client(),
+        agent_client=agent_client,
+        # The reviewer is billed on the agent key; the fast validator on the Decisions key.
+        response_validation_pipeline=ResponseValidationPipeline(
+            FastValidator(decisions_client), ResponseReviewer(agent_client)
+        ),
     )
 
 
@@ -55,4 +65,12 @@ def run_customer_service_agent(question: str) -> AgentRun:
     registry = build_tool_registry(
         agent_runtime.store_data, agent_runtime.product_searcher, ConversationSession()
     )
-    return run_agent(question, registry, agent_runtime.agent_client)
+    agent_run = run_agent(question, registry, agent_runtime.agent_client)
+    # The repair reuses this question's registry, so the session (premier status) carries over.
+    agent_runtime.response_validation_pipeline.validate(
+        agent_run,
+        lambda review_feedback: repair_agent_answer(
+            agent_run, registry, agent_runtime.agent_client, review_feedback
+        ),
+    )
+    return agent_run

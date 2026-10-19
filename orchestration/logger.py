@@ -1,4 +1,4 @@
-"""Debug logging for us: configures agent.log and writes each run's trace (tool calls, args, results, errors, latency, answer) or failure."""
+"""Debug logging for us: configures agent.log and writes each run's trace (tool calls, args, results, errors, latency, response validation, answer) or failure."""
 from __future__ import annotations
 
 import json
@@ -38,8 +38,38 @@ def format_agent_run(agent_run: AgentRun) -> str:
         if tool_call.error is not None:
             lines.append(f"      ERROR: {tool_call.error}")
         lines.append(f"      RESULT: {json.dumps(tool_call.result, ensure_ascii=False)}")
+    lines.extend(format_response_validation(agent_run))
     lines.append(f"FINAL ANSWER: {agent_run.final_answer}")
     return "\n".join(lines)
+
+
+def format_response_validation(agent_run: AgentRun) -> list[str]:
+    response_validation = agent_run.response_validation
+    if response_validation is None:
+        return []
+    lines = ["RESPONSE VALIDATION:"]
+    if response_validation.skipped_reason is not None:
+        lines.append(f"  skipped: {response_validation.skipped_reason}")
+    fast_validation = response_validation.fast_validation
+    if fast_validation is not None:
+        lines.append(
+            f"  fast: ok={fast_validation.is_ok} label={fast_validation.most_likely_label} "
+            f"probabilities={json.dumps(fast_validation.probability_by_label)} "
+            f"{fast_validation.latency_ms:.0f}ms"
+        )
+    review = response_validation.review
+    if review is not None:
+        lines.append(
+            f"  review: actually_wrong={review.verdict.is_actually_wrong} "
+            f"problems={json.dumps(review.verdict.problems, ensure_ascii=False)} {review.latency_ms:.0f}ms"
+        )
+        if review.verdict.fix_instructions:
+            lines.append(f"  fix_instructions: {review.verdict.fix_instructions}")
+    if response_validation.original_answer is not None:
+        lines.append(f"  repaired; ORIGINAL ANSWER: {response_validation.original_answer}")
+    if response_validation.error is not None:
+        lines.append(f"  ERROR (answer kept): {response_validation.error}")
+    return lines
 
 
 def log_agent_run(agent_run: AgentRun) -> None:
