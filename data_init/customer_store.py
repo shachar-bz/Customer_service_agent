@@ -15,8 +15,3 @@ def get_cust_data_collection(json_path: str = _DEF_PATH):
     if records:
         coll.insert_many(records)
     return coll
-
-if __name__ == "__main__":
-    c = get_cust_data_collection()
-    print(f"Loaded {c.count_documents({})} customers into cust_data.")
-    print("Sample:", c.find_one({"email": "rob.brown@email.net"}, {"_id": 0, "pw": 0}))
