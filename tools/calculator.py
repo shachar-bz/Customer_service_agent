@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import ast
-import math
 import operator
 from decimal import ROUND_HALF_UP, Context, Decimal
 from typing import Any, Callable, Union
@@ -30,12 +29,11 @@ ALLOWED_UNARY_OPERATORS: dict[type[ast.unaryop], Callable[[Any], Any]] = {
     ast.UAdd: operator.pos,
     ast.USub: operator.neg,
 }
-# Function name -> (callable, min positional args, max positional args).
-ALLOWED_FUNCTIONS: dict[str, tuple[Callable[..., Any], int, float]] = {
-    "round": (round, 1, 2),
-    "min": (min, 2, math.inf),
-    "max": (max, 2, math.inf),
-    "abs": (abs, 1, 1),
+ALLOWED_FUNCTIONS: dict[str, Callable[..., Any]] = {
+    "round": round,
+    "min": min,
+    "max": max,
+    "abs": abs,
 }
 
 CALCULATOR_SCHEMA = {
@@ -82,8 +80,6 @@ class CalculatorError(Exception):
 def check_magnitude(value: Any) -> Number:
     if isinstance(value, complex):
         raise CalculatorError("The result is not a real number (e.g. a fractional power of a negative number).")
-    if isinstance(value, float) and not math.isfinite(value):
-        raise CalculatorError("The result is too large.")
     if abs(value) > MAX_RESULT_MAGNITUDE:
         raise CalculatorError(f"The result is too large (limit is {MAX_RESULT_MAGNITUDE:g}).")
     return value
@@ -103,21 +99,11 @@ def evaluate_function_call(node: ast.Call) -> Number:
         raise CalculatorError(
             f"Function call to {describe_node(node.func)} is not allowed; only {allowed_names} are supported."
         )
-    function_name = node.func.id
-    if node.keywords or any(isinstance(argument, ast.Starred) for argument in node.args):
-        raise CalculatorError(f"{function_name}() accepts positional numbers only.")
-
-    function, min_args, max_args = ALLOWED_FUNCTIONS[function_name]
-    if not min_args <= len(node.args) <= max_args:
-        expected = f"{min_args}" if min_args == max_args else (
-            f"{min_args} or more" if max_args == math.inf else f"{min_args} to {int(max_args)}"
-        )
-        raise CalculatorError(f"{function_name}() takes {expected} arguments, got {len(node.args)}.")
-
+    if node.keywords:
+        raise CalculatorError(f"{node.func.id}() accepts positional numbers only.")
+    # Wrong arity or argument types raise TypeError/ValueError from the builtin; calculator() reports them.
     argument_values = [evaluate_node(argument) for argument in node.args]
-    if function_name == "round" and len(argument_values) == 2 and not isinstance(argument_values[1], int):
-        raise CalculatorError("round()'s second argument (number of digits) must be a whole number.")
-    return check_magnitude(function(*argument_values))
+    return check_magnitude(ALLOWED_FUNCTIONS[node.func.id](*argument_values))
 
 
 def evaluate_node(node: ast.AST) -> Number:
