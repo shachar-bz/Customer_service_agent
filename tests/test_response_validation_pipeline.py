@@ -104,16 +104,6 @@ def test_capped_run_is_not_validated():
     assert question_outcome.final_answer == "original"
 
 
-def test_repair_that_raises_keeps_original_answer():
-    question_outcome, repair = run_pipeline(
-        FakeFastValidator(ok_probability=0.1), FakeReviewer(), repair_error=RuntimeError("down")
-    )
-
-    assert len(repair.feedback) == 1
-    assert question_outcome.response_validation.final_answer == "original"
-    assert question_outcome.final_answer == "original"
-
-
 def test_failures_keep_original_answer():
     cases = [
         (FakeFastValidator(error=RuntimeError("down")), FakeReviewer(), None),

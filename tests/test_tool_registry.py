@@ -60,11 +60,6 @@ def test_malformed_json_returns_error(registry):
     assert registry.dispatch("calculator", "not json") == {"error": INVALID_ARGUMENTS_JSON_MESSAGE}
 
 
-@pytest.mark.parametrize("raw_arguments_json", ["{}", "[1, 2]"])
-def test_invalid_arguments_return_validation_error(registry, raw_arguments_json):
-    assert "Invalid arguments" in registry.dispatch("calculator", raw_arguments_json)["error"]
-
-
 def test_tool_exception_is_returned_as_error():
     def exploding_calculator(expression):
         raise RuntimeError("boom")

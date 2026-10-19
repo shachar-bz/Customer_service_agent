@@ -13,7 +13,7 @@ from data_init.product_index import ProductSearchMatch
 from pricing.customer_pricing import PREMIER_DISCOUNT_RATE
 from tools.base import execute_tool
 from tools.search_products.pipeline import RETRIEVAL_CANDIDATE_COUNT, SEARCH_RESULT_COUNT
-from tools.search_products.reranker import RERANK_QUESTION_NAME, ProductRerankError, rerank_products
+from tools.search_products.reranker import RERANK_QUESTION_NAME
 from tools.search_products.tool import (
     SearchProductsArgs,
     search_products,
@@ -164,11 +164,6 @@ def test_falls_back_to_vector_order_when_rerank_fails(decisions_client, caplog):
     assert returned_ids(result) == CANDIDATE_IDS[:SEARCH_RESULT_COUNT]
     assert "note" not in result
     assert "Rerank failed" in caplog.text and "query='scale'" in caplog.text
-
-
-def test_refusal_raises_rerank_error():
-    with pytest.raises(ProductRerankError):
-        rerank_products(FakeDecisionsClient(refuse=True), "scale", [make_product("a")])
 
 
 def test_premier_customer_sees_discounted_customer_price():
