@@ -20,7 +20,6 @@ CHROMA_DATA_DIR = Path(__file__).resolve().parent.parent / "chroma_data"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 COLLECTION_NAME_PREFIX = "products"
 CATALOG_HASH_LENGTH = 12
-ADD_BATCH_SIZE = 500
 
 
 @dataclass(frozen=True)
@@ -68,14 +67,6 @@ def _create_embedding_function() -> SentenceTransformerEmbeddingFunction:
     return SentenceTransformerEmbeddingFunction(model_name=EMBEDDING_MODEL_NAME)
 
 
-def _open_collection(client: chromadb.ClientAPI, collection_name: str) -> chromadb.Collection:
-    return client.get_or_create_collection(
-        name=collection_name,
-        embedding_function=_create_embedding_function(),
-        metadata={"hnsw:space": "cosine"},
-    )
-
-
 def build_product_index(
     products: list[Product],
     data_dir: Path = CHROMA_DATA_DIR,
@@ -86,21 +77,17 @@ def build_product_index(
         settings=Settings(anonymized_telemetry=False),
     )
     collection_name = f"{COLLECTION_NAME_PREFIX}_{catalog_hash(products)}"
-    collection = _open_collection(client, collection_name)
+    collection = client.get_or_create_collection(
+        name=collection_name,
+        embedding_function=_create_embedding_function(),
+        metadata={"hnsw:space": "cosine"},
+    )
 
-    if collection.count() == len(products):
-        return ProductIndex(collection)
-
-    # Left partially filled by an interrupted build: start over.
-    if collection.count() > 0:
-        client.delete_collection(collection_name)
-        collection = _open_collection(client, collection_name)
-
-    for batch_start in range(0, len(products), ADD_BATCH_SIZE):
-        product_batch = products[batch_start : batch_start + ADD_BATCH_SIZE]
-        collection.add(
-            ids=[product.uniq_id for product in product_batch],
-            documents=[product_embedding_text(product) for product in product_batch],
+    # Upsert also completes a collection left partially filled by an interrupted build.
+    if collection.count() != len(products):
+        collection.upsert(
+            ids=[product.uniq_id for product in products],
+            documents=[product_embedding_text(product) for product in products],
         )
 
     return ProductIndex(collection)
