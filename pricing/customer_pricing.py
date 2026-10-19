@@ -1,6 +1,8 @@
 """Customer-specific pricing: the premier discount and the priced product view tools return."""
 from __future__ import annotations
 
+from decimal import ROUND_HALF_UP, Decimal
+
 from pydantic import BaseModel
 
 from data_init.product_catalog import Product
@@ -25,7 +27,8 @@ class PricedProduct(BaseModel):
 
 def customer_price(product: Product, discount_rate: float) -> float:
     """The discount stacks on sale_price, which equals list_price when the item is not on sale."""
-    return round(product.sale_price * (1 - discount_rate), 2)
+    discounted = Decimal(str(product.sale_price)) * (1 - Decimal(str(discount_rate)))
+    return float(discounted.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
 def priced_product_view(product: Product, discount_rate: float) -> PricedProduct:

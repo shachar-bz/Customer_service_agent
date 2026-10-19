@@ -49,6 +49,11 @@ def test_result_is_rounded_to_two_decimals():
     assert calculate("-0.001") == {"result": 0.0}
 
 
+def test_result_rounds_half_up_not_down_on_float_artifacts():
+    # 11.495 is stored as 11.4949... in binary; float round() gives 11.49.
+    assert calculate("12.1 * 0.95") == {"result": 11.5}
+
+
 def test_premier_threshold_example():
     assert calculate("2000 - (1700 + 129.99)") == {"result": 170.01}
 

@@ -30,6 +30,11 @@ def test_premier_discount_stacks_on_sale_price():
     assert customer_price(make_product(120.0, 104.99), PREMIER_DISCOUNT_RATE) == 99.74
 
 
+def test_premier_price_rounds_half_up_not_down_on_float_artifacts():
+    # 12.1 * 0.95 is 11.495; float round() gives 11.49, the half-up price is 11.50.
+    assert customer_price(make_product(12.1, 12.1), PREMIER_DISCOUNT_RATE) == 11.5
+
+
 def test_priced_view_exposes_both_prices():
     view = priced_product_view(make_product(120.0, 104.0), PREMIER_DISCOUNT_RATE)
 

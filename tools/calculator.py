@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 import math
 import operator
+from decimal import ROUND_HALF_UP, Context, Decimal
 from typing import Any, Callable, Union
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -175,4 +176,9 @@ def calculator(expression: str) -> dict[str, Any]:
         return {"error": "Invalid expression: too deeply nested."}
 
     # + 0.0 turns -0.0 into 0.0.
-    return {"result": round(float(value), RESULT_DECIMAL_PLACES) + 0.0}
+    # Decimal avoids float artifacts (12.1 * 0.95 is 11.495 in binary, which round() sends to 11.49).
+    # The wide context keeps quantize from overflowing on results near MAX_RESULT_MAGNITUDE.
+    rounded = Decimal(str(float(value))).quantize(
+        Decimal(1).scaleb(-RESULT_DECIMAL_PLACES), rounding=ROUND_HALF_UP, context=Context(prec=200)
+    )
+    return {"result": float(rounded) + 0.0}
