@@ -1,0 +1,31 @@
+"""Builds the text both the fast validator and the reviewer judge: customer message, agent answer, and the products the agent retrieved."""
+from __future__ import annotations
+
+import json
+from typing import Any
+
+from orchestration.agent import ToolCallRecord
+
+NO_PRODUCTS_RETRIEVED = "(no products were retrieved)"
+
+
+def collect_retrieved_products(tool_calls: list[ToolCallRecord]) -> list[dict[str, Any]]:
+    """Every product view any tool returned, first occurrence wins, in retrieval order."""
+    products_by_id: dict[str, dict[str, Any]] = {}
+    for tool_call in tool_calls:
+        for product in tool_call.result.get("products", []):
+            products_by_id.setdefault(product["product_id"], product)
+    return list(products_by_id.values())
+
+
+def format_response_context(question: str, answer: str, products: list[dict[str, Any]]) -> str:
+    product_lines = (
+        "\n".join(json.dumps(product, ensure_ascii=False) for product in products)
+        if products
+        else NO_PRODUCTS_RETRIEVED
+    )
+    return (
+        f"Customer message:\n{question}\n\n"
+        f"Agent answer:\n{answer}\n\n"
+        f"Product data the agent retrieved (customer_price is the price the customer pays):\n{product_lines}"
+    )
