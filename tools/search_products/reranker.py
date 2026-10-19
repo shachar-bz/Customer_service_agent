@@ -12,7 +12,7 @@ from data_init.product_catalog import Product
 from data_init.product_index import product_embedding_text
 
 DECISIONS_MODEL = "gpt-6-luna"
-DECISIONS_API_KEY_ENV_VAR = "OPENAI_APY_KEY_DECISIONS"
+DECISIONS_API_KEY_ENV_VAR = "OPENAI_API_KEY_DECISIONS"
 RERANK_QUESTION_NAME = "product_satisfies_need"
 RERANK_INSTRUCTIONS = (
     "The input is a shopper's need and one product. Does the product satisfy the need?"
