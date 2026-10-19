@@ -15,7 +15,6 @@ from tools.base import execute_tool
 from tools.search_products.pipeline import RETRIEVAL_CANDIDATE_COUNT, SEARCH_RESULT_COUNT, ProductSearcher
 from tools.search_products.reranker import RERANK_QUESTION_NAME, ProductRerankError, ProductReranker
 from tools.search_products.tool import (
-    NO_RESULTS_NOTE,
     SearchProductsArgs,
     search_products,
 )
@@ -127,7 +126,7 @@ def test_makes_one_predicate_call_per_candidate_and_returns_top_ten_by_probabili
     assert all("scale with lbs and kg" in call["input"] for call in decisions_client.create_calls)
 
 
-def test_tie_at_the_cutoff_goes_to_the_smaller_cosine_distance():
+def test_tie_at_the_cutoff_goes_to_the_earlier_vector_candidate():
     # Candidates are in distance order (product_0 closest). Top 9 are clear; 10th-12th tie.
     probability_by_id = {f"product_{position}": 0.9 for position in range(9)}
     probability_by_id.update({"product_14": 0.5, "product_12": 0.5, "product_10": 0.5})
@@ -182,14 +181,14 @@ def test_premier_customer_sees_discounted_customer_price():
     assert result["products"][0]["customer_price"] == round(100.0 * (1 - PREMIER_DISCOUNT_RATE), 2)
 
 
-def test_empty_index_returns_note():
+def test_empty_index_returns_no_products():
     decisions_client = FakeDecisionsClient(refuse=True)
     tool, _ = build_search_tool(decisions_client, uniq_ids=[])
 
     result = tool(query="scale")
 
     assert result["products"] == []
-    assert result["note"] == NO_RESULTS_NOTE
+    assert "note" not in result
 
 
 @pytest.mark.parametrize("raw_args", [{"query": "   "}, {}, {"query": "scale", "top_k": 3}])

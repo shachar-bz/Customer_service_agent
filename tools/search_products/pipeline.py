@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import Optional
 
 from openai import OpenAIError
 
@@ -18,19 +16,6 @@ SEARCH_RESULT_COUNT = 10
 agent_logger = logging.getLogger("customer_service_agent")
 
 
-@dataclass(frozen=True)
-class RankedProduct:
-    product: Product
-    # None when reranking failed and the order comes from vector distance alone.
-    relevance_probability: Optional[float]
-
-
-@dataclass(frozen=True)
-class ProductSearchOutcome:
-    ranked_products: list[RankedProduct]
-    reranked: bool
-
-
 class ProductSearcher:
     def __init__(
         self,
@@ -42,13 +27,10 @@ class ProductSearcher:
         self._products_by_id = products_by_id
         self._product_reranker = product_reranker
 
-    def search(self, query: str) -> ProductSearchOutcome:
+    def search(self, query: str) -> list[Product]:
         """Falls back to vector order when the rerank call fails, so the agent still gets results."""
         matches = self._product_index.search(query, top_k=RETRIEVAL_CANDIDATE_COUNT)
         candidates = [self._products_by_id[match.uniq_id] for match in matches]
-        distance_by_id = {match.uniq_id: match.distance for match in matches}
-        if not candidates:
-            return ProductSearchOutcome(ranked_products=[], reranked=True)
 
         try:
             reranked_products = self._product_reranker.rerank(query, candidates)
@@ -59,26 +41,9 @@ class ProductSearcher:
                 type(rerank_error).__name__,
                 rerank_error,
             )
-            return ProductSearchOutcome(
-                ranked_products=[
-                    RankedProduct(product=product, relevance_probability=None)
-                    for product in candidates[:SEARCH_RESULT_COUNT]
-                ],
-                reranked=False,
-            )
+            return candidates[:SEARCH_RESULT_COUNT]
 
-        # Equal probabilities (including at the top-10 cutoff) go to the smaller cosine distance.
-        reranked_products = sorted(
-            reranked_products,
-            key=lambda reranked: (-reranked.relevance_probability, distance_by_id[reranked.uniq_id]),
-        )
-        return ProductSearchOutcome(
-            ranked_products=[
-                RankedProduct(
-                    product=self._products_by_id[reranked.uniq_id],
-                    relevance_probability=reranked.relevance_probability,
-                )
-                for reranked in reranked_products[:SEARCH_RESULT_COUNT]
-            ],
-            reranked=True,
-        )
+        # sorted is stable and candidates are in vector-distance order, so equal probabilities
+        # (including at the top-10 cutoff) go to the smaller cosine distance.
+        reranked_products = sorted(reranked_products, key=lambda reranked: -reranked.relevance_probability)
+        return [self._products_by_id[reranked.uniq_id] for reranked in reranked_products[:SEARCH_RESULT_COUNT]]

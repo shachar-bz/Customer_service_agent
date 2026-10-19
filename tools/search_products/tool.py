@@ -9,8 +9,6 @@ from pricing.conversation_session import ConversationSession
 from pricing.customer_pricing import priced_product_view
 from tools.search_products.pipeline import SEARCH_RESULT_COUNT, ProductSearcher
 
-NO_RESULTS_NOTE = "No products found for this query."
-
 SEARCH_PRODUCTS_SCHEMA = {
     "type": "function",
     "name": "search_products",
@@ -60,14 +58,10 @@ def search_products(
     session: ConversationSession,
     query: str,
 ) -> dict[str, Any]:
-    search_outcome = product_searcher.search(query)
     discount_rate = session.discount_rate
-    result: dict[str, Any] = {
+    return {
         "products": [
-            priced_product_view(ranked.product, discount_rate).model_dump()
-            for ranked in search_outcome.ranked_products
+            priced_product_view(product, discount_rate).model_dump()
+            for product in product_searcher.search(query)
         ],
     }
-    if not search_outcome.ranked_products:
-        result["note"] = NO_RESULTS_NOTE
-    return result
