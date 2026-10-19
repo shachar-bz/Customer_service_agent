@@ -12,8 +12,8 @@ from pricing.conversation_session import ConversationSession
 from data_init.product_index import ProductSearchMatch
 from pricing.customer_pricing import PREMIER_DISCOUNT_RATE
 from tools.base import execute_tool
-from tools.search_products.pipeline import RETRIEVAL_CANDIDATE_COUNT, SEARCH_RESULT_COUNT, ProductSearcher
-from tools.search_products.reranker import RERANK_QUESTION_NAME, ProductRerankError, ProductReranker
+from tools.search_products.pipeline import RETRIEVAL_CANDIDATE_COUNT, SEARCH_RESULT_COUNT
+from tools.search_products.reranker import RERANK_QUESTION_NAME, ProductRerankError, rerank_products
 from tools.search_products.tool import (
     SearchProductsArgs,
     search_products,
@@ -98,8 +98,9 @@ class FakeDecisionsClient:
 def build_search_tool(decisions_client: FakeDecisionsClient, session=None, uniq_ids=CANDIDATE_IDS):
     product_index = FakeProductIndex(uniq_ids)
     products_by_id = {uniq_id: make_product(uniq_id) for uniq_id in uniq_ids}
-    product_searcher = ProductSearcher(product_index, products_by_id, ProductReranker(decisions_client))
-    tool = partial(search_products, product_searcher, session or ConversationSession())
+    tool = partial(
+        search_products, product_index, products_by_id, decisions_client, session or ConversationSession()
+    )
     return tool, product_index
 
 
@@ -166,9 +167,8 @@ def test_falls_back_to_vector_order_when_rerank_fails(decisions_client, caplog):
 
 
 def test_refusal_raises_rerank_error():
-    reranker = ProductReranker(FakeDecisionsClient(refuse=True))
     with pytest.raises(ProductRerankError):
-        reranker.rerank("scale", [make_product("a")])
+        rerank_products(FakeDecisionsClient(refuse=True), "scale", [make_product("a")])
 
 
 def test_premier_customer_sees_discounted_customer_price():

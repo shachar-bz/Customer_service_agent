@@ -27,35 +27,32 @@ class RerankedProduct:
     relevance_probability: float
 
 
-class ProductReranker:
-    def __init__(self, decisions_client: OpenAI) -> None:
-        self._decisions_client = decisions_client
+def rerank_products(decisions_client: OpenAI, query: str, candidates: list[Product]) -> list[RerankedProduct]:
+    """Scores every candidate with its own predicate call (run in parallel).
+    Returns scores in the incoming candidate order; the caller does the final ordering."""
+    if not candidates:
+        return []
+    with ThreadPoolExecutor(max_workers=len(candidates)) as executor:
+        return list(executor.map(lambda product: _score_product(decisions_client, query, product), candidates))
 
-    def rerank(self, query: str, candidates: list[Product]) -> list[RerankedProduct]:
-        """Scores every candidate with its own predicate call (run in parallel).
-        Returns scores in the incoming candidate order; the caller does the final ordering."""
-        if not candidates:
-            return []
-        with ThreadPoolExecutor(max_workers=len(candidates)) as executor:
-            return list(executor.map(lambda product: self._score_product(query, product), candidates))
 
-    def _score_product(self, query: str, product: Product) -> RerankedProduct:
-        decision = self._decisions_client.decisions.create(
-            model=DECISIONS_MODEL,
-            input=f"Shopper need: {query}\n\nProduct: {product_embedding_text(product)}",
-            questions=[
-                {
-                    "type": "predicate",
-                    "name": RERANK_QUESTION_NAME,
-                    "instructions": RERANK_INSTRUCTIONS,
-                }
-            ],
-        )
-        answer = next(
-            (answer for answer in decision.answers if answer.name == RERANK_QUESTION_NAME),
-            None,
-        )
-        if answer is None or answer.type != "predicate":
-            answer_type = "no answer" if answer is None else answer.type
-            raise ProductRerankError(f"Expected a predicate answer, got {answer_type}.")
-        return RerankedProduct(uniq_id=product.uniq_id, relevance_probability=answer.probability)
+def _score_product(decisions_client: OpenAI, query: str, product: Product) -> RerankedProduct:
+    decision = decisions_client.decisions.create(
+        model=DECISIONS_MODEL,
+        input=f"Shopper need: {query}\n\nProduct: {product_embedding_text(product)}",
+        questions=[
+            {
+                "type": "predicate",
+                "name": RERANK_QUESTION_NAME,
+                "instructions": RERANK_INSTRUCTIONS,
+            }
+        ],
+    )
+    answer = next(
+        (answer for answer in decision.answers if answer.name == RERANK_QUESTION_NAME),
+        None,
+    )
+    if answer is None or answer.type != "predicate":
+        answer_type = "no answer" if answer is None else answer.type
+        raise ProductRerankError(f"Expected a predicate answer, got {answer_type}.")
+    return RerankedProduct(uniq_id=product.uniq_id, relevance_probability=answer.probability)

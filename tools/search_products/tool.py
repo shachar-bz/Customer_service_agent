@@ -3,12 +3,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from openai import OpenAI
 from pydantic import BaseModel, ConfigDict
 
+from data_init.product_catalog import Product
+from data_init.product_index import ProductIndex
 from pricing.conversation_session import ConversationSession
 from pricing.customer_pricing import priced_product_view
 from tools.base import NonBlankStr
-from tools.search_products.pipeline import SEARCH_RESULT_COUNT, ProductSearcher
+from tools.search_products.pipeline import SEARCH_RESULT_COUNT, search_catalog
 
 SEARCH_PRODUCTS_SCHEMA = {
     "type": "function",
@@ -47,7 +50,9 @@ class SearchProductsArgs(BaseModel):
 
 
 def search_products(
-    product_searcher: ProductSearcher,
+    product_index: ProductIndex,
+    products_by_id: dict[str, Product],
+    decisions_client: OpenAI,
     session: ConversationSession,
     query: str,
 ) -> dict[str, Any]:
@@ -55,6 +60,6 @@ def search_products(
     return {
         "products": [
             priced_product_view(product, discount_rate).model_dump()
-            for product in product_searcher.search(query)
+            for product in search_catalog(product_index, products_by_id, decisions_client, query)
         ],
     }

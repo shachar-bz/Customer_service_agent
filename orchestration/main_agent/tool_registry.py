@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable
 
+from openai import OpenAI
 from pydantic import BaseModel
 
 from data_init.store_data import StoreData
@@ -15,12 +16,7 @@ from tools.base import execute_tool
 from tools.calculator import CALCULATOR_SCHEMA, CalculatorArgs, calculator
 from tools.filter_products import FILTER_PRODUCTS_SCHEMA, FilterProductsArgs, filter_products
 from tools.get_customer import GET_CUSTOMER_SCHEMA, GetCustomerArgs, get_customer
-from tools.search_products import (
-    SEARCH_PRODUCTS_SCHEMA,
-    ProductSearcher,
-    SearchProductsArgs,
-    search_products,
-)
+from tools.search_products import SEARCH_PRODUCTS_SCHEMA, SearchProductsArgs, search_products
 
 UNKNOWN_TOOL_MESSAGE = "Unknown tool: {tool_name}."
 INVALID_ARGUMENTS_JSON_MESSAGE = "Invalid arguments: expected a JSON object."
@@ -72,7 +68,7 @@ class ToolRegistry:
 
 def build_tool_registry(
     store_data: StoreData,
-    product_searcher: ProductSearcher,
+    decisions_client: OpenAI,
     session: ConversationSession,
 ) -> ToolRegistry:
     """One registry per conversation: session-aware tools are bound to this conversation's session."""
@@ -97,7 +93,13 @@ def build_tool_registry(
             RegisteredTool(
                 SEARCH_PRODUCTS_SCHEMA,
                 SearchProductsArgs,
-                partial(search_products, product_searcher, session),
+                partial(
+                    search_products,
+                    store_data.product_index,
+                    store_data.products_by_id,
+                    decisions_client,
+                    session,
+                ),
             ),
             RegisteredTool(CALCULATOR_SCHEMA, CalculatorArgs, calculator),
         ]

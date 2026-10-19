@@ -25,8 +25,8 @@ def install_fake_runtime(monkeypatch):
     """Replaces the cached runtime and the agent calls; returns the recorded repair calls."""
     fake_runtime = AgentRuntime(
         store_data=object(),
-        product_searcher=object(),
         agent_client=FAKE_AGENT_CLIENT,
+        decisions_client=object(),
         response_validation_pipeline=ResponseValidationPipeline(FlaggingFastValidator(), ConfirmingReviewer()),
     )
     repair_calls = []

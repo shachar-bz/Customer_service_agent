@@ -16,7 +16,6 @@ from orchestration.response_validator.pipeline import ResponseValidationPipeline
 from orchestration.response_validator.reviewer import ResponseReviewer
 from pricing.conversation_session import ConversationSession
 from orchestration.main_agent.tool_registry import build_tool_registry
-from tools.search_products import ProductReranker, ProductSearcher
 
 AGENT_API_KEY_ENV_VAR = "OPENAI_API_KEY_AGENT"
 DECISIONS_API_KEY_ENV_VAR = "OPENAI_API_KEY_DECISIONS"
@@ -26,8 +25,8 @@ DECISIONS_API_KEY_ENV_VAR = "OPENAI_API_KEY_DECISIONS"
 class AgentRuntime:
     """Shared across questions: read-only data and stateless clients."""
     store_data: StoreData
-    product_searcher: ProductSearcher
     agent_client: OpenAI
+    decisions_client: OpenAI
     response_validation_pipeline: ResponseValidationPipeline
 
 
@@ -45,15 +44,10 @@ def get_agent_runtime() -> AgentRuntime:
     store_data = load_store_data()
     decisions_client = create_openai_client(DECISIONS_API_KEY_ENV_VAR)
     agent_client = create_openai_client(AGENT_API_KEY_ENV_VAR)
-    product_searcher = ProductSearcher(
-        store_data.product_index,
-        store_data.products_by_id,
-        ProductReranker(decisions_client),
-    )
     return AgentRuntime(
         store_data=store_data,
-        product_searcher=product_searcher,
         agent_client=agent_client,
+        decisions_client=decisions_client,
         # The reviewer is billed on the agent key; the fast validator on the Decisions key.
         response_validation_pipeline=ResponseValidationPipeline(
             FastValidator(decisions_client), ResponseReviewer(agent_client)
@@ -65,7 +59,7 @@ def run_customer_service_agent(question: str) -> QuestionOutcome:
     """Each question gets a fresh session, so premier status never leaks between questions."""
     agent_runtime = get_agent_runtime()
     registry = build_tool_registry(
-        agent_runtime.store_data, agent_runtime.product_searcher, ConversationSession()
+        agent_runtime.store_data, agent_runtime.decisions_client, ConversationSession()
     )
     agent_run = run_agent(question, registry, agent_runtime.agent_client)
     # The repair reuses this question's registry, so the session (premier status) carries over.

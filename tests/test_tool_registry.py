@@ -27,8 +27,8 @@ def registry(session):
         product_index=None,
         customers=get_cust_data_collection(),
     )
-    # search_products is not exercised here, so no real searcher (index, Decisions API) is needed.
-    return build_tool_registry(store_data, product_searcher=None, session=session)
+    # search_products is not exercised here, so no real index or Decisions client is needed.
+    return build_tool_registry(store_data, decisions_client=None, session=session)
 
 
 def test_exposes_every_tool_schema(registry):
