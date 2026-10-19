@@ -6,7 +6,7 @@ from orchestration.main_agent.agent import ToolCallRecord
 from orchestration.response_validator.fast_validator import (
     OK_LABEL,
     FastValidationError,
-    FastValidator,
+    run_fast_validation,
 )
 from orchestration.response_validator.fast_validator.fast_validator import FAST_VALIDATION_QUESTION_NAME
 from orchestration.response_validator.fast_validator.prompt import (
@@ -45,7 +45,7 @@ class FakeDecisionsClient:
 def test_sends_one_choice_question_with_all_labels_and_context():
     decisions_client = FakeDecisionsClient([choice_answer({OK_LABEL: 0.9})])
 
-    FastValidator(decisions_client).validate("need a mug", "1. Mug - $5", [{"product_id": "p1"}])
+    run_fast_validation(decisions_client, "need a mug", "1. Mug - $5", [{"product_id": "p1"}])
 
     [request] = decisions_client.requests
     [question] = request["questions"]
@@ -58,7 +58,7 @@ def test_sends_one_choice_question_with_all_labels_and_context():
 def test_ok_probability_at_threshold_passes():
     decisions_client = FakeDecisionsClient([choice_answer({OK_LABEL: 0.5, TOO_MANY_PRODUCTS_LABEL: 0.5})])
 
-    result = FastValidator(decisions_client).validate("q", "a", [])
+    result = run_fast_validation(decisions_client, "q", "a", [])
 
     assert result.is_ok
 
@@ -66,7 +66,7 @@ def test_ok_probability_at_threshold_passes():
 def test_low_ok_probability_fails_with_most_likely_problem():
     decisions_client = FakeDecisionsClient([choice_answer({OK_LABEL: 0.3, TOO_MANY_PRODUCTS_LABEL: 0.7})])
 
-    result = FastValidator(decisions_client).validate("q", "a", [])
+    result = run_fast_validation(decisions_client, "q", "a", [])
 
     assert not result.is_ok
     assert result.most_likely_label == TOO_MANY_PRODUCTS_LABEL
@@ -77,7 +77,7 @@ def test_most_likely_label_ignores_ok_even_when_it_is_largest():
         [choice_answer({OK_LABEL: 0.45, TOO_MANY_PRODUCTS_LABEL: 0.3, "question_not_answered": 0.25})]
     )
 
-    result = FastValidator(decisions_client).validate("q", "a", [])
+    result = run_fast_validation(decisions_client, "q", "a", [])
 
     assert not result.is_ok
     assert result.most_likely_label == TOO_MANY_PRODUCTS_LABEL
@@ -89,7 +89,7 @@ def test_most_likely_label_ignores_ok_even_when_it_is_largest():
 )
 def test_unusable_answer_raises(answers):
     with pytest.raises(FastValidationError):
-        FastValidator(FakeDecisionsClient(answers)).validate("q", "a", [])
+        run_fast_validation(FakeDecisionsClient(answers), "q", "a", [])
 
 
 def tool_call_with_products(*product_ids):

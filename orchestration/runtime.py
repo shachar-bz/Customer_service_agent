@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from functools import cache
+from functools import cache, partial
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -11,9 +11,9 @@ from openai import OpenAI
 from data_init.store_data import StoreData, load_store_data
 from orchestration.main_agent.agent import repair_agent_answer, run_agent
 from orchestration.question_outcome import QuestionOutcome
-from orchestration.response_validator.fast_validator import FastValidator
-from orchestration.response_validator.pipeline import ResponseValidationPipeline
-from orchestration.response_validator.reviewer import ResponseReviewer
+from orchestration.response_validator.fast_validator import run_fast_validation
+from orchestration.response_validator.pipeline import validate_response
+from orchestration.response_validator.reviewer import review_response
 from pricing.conversation_session import ConversationSession
 from orchestration.main_agent.tool_registry import build_tool_registry
 
@@ -27,7 +27,6 @@ class AgentRuntime:
     store_data: StoreData
     agent_client: OpenAI
     decisions_client: OpenAI
-    response_validation_pipeline: ResponseValidationPipeline
 
 
 def create_openai_client(api_key_env_var: str) -> OpenAI:
@@ -48,10 +47,6 @@ def get_agent_runtime() -> AgentRuntime:
         store_data=store_data,
         agent_client=agent_client,
         decisions_client=decisions_client,
-        # The reviewer is billed on the agent key; the fast validator on the Decisions key.
-        response_validation_pipeline=ResponseValidationPipeline(
-            FastValidator(decisions_client), ResponseReviewer(agent_client)
-        ),
     )
 
 
@@ -63,9 +58,12 @@ def run_customer_service_agent(question: str) -> QuestionOutcome:
     )
     agent_run = run_agent(question, registry, agent_runtime.agent_client)
     # The repair reuses this question's registry, so the session (premier status) carries over.
-    response_validation = agent_runtime.response_validation_pipeline.validate(
+    response_validation = validate_response(
         agent_run,
-        lambda review_feedback: repair_agent_answer(
+        fast_validate=partial(run_fast_validation, agent_runtime.decisions_client),
+        # The reviewer is billed on the agent key; the fast validator on the Decisions key.
+        review_response=partial(review_response, agent_runtime.agent_client),
+        repair_answer=lambda review_feedback: repair_agent_answer(
             agent_run, registry, agent_runtime.agent_client, review_feedback
         ),
     )

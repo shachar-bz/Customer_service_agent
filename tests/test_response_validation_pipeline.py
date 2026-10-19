@@ -2,7 +2,7 @@ from orchestration.main_agent.agent import AgentRun
 from orchestration.logger import format_question_outcome
 from orchestration.question_outcome import QuestionOutcome
 from orchestration.response_validator.fast_validator import FastValidationResult
-from orchestration.response_validator.pipeline import SKIPPED_STOPPED_BY_CAP, ResponseValidationPipeline
+from orchestration.response_validator.pipeline import SKIPPED_STOPPED_BY_CAP, validate_response
 from orchestration.response_validator.reviewer import ResponseReview, ResponseReviewVerdict
 
 
@@ -12,7 +12,7 @@ class FakeFastValidator:
         self._error = error
         self.calls = 0
 
-    def validate(self, question, answer, products):
+    def __call__(self, question, answer, products):
         self.calls += 1
         if self._error is not None:
             raise self._error
@@ -27,7 +27,7 @@ class FakeReviewer:
         self._error = error
         self.calls = []
 
-    def review(self, question, answer, flagged_label, probability_by_label):
+    def __call__(self, question, answer, flagged_label, probability_by_label):
         self.calls.append(flagged_label)
         if self._error is not None:
             raise self._error
@@ -55,7 +55,7 @@ class RecordingRepair:
 def run_pipeline(fast_validator, reviewer, stopped_by_cap=False, repair_error=None):
     agent_run = AgentRun(question="q", final_answer="original", stopped_by_cap=stopped_by_cap)
     repair = RecordingRepair(error=repair_error)
-    response_validation = ResponseValidationPipeline(fast_validator, reviewer).validate(agent_run, repair)
+    response_validation = validate_response(agent_run, fast_validator, reviewer, repair)
     return QuestionOutcome(agent_run=agent_run, response_validation=response_validation), repair
 
 

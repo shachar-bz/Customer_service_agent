@@ -43,35 +43,33 @@ class FastValidationResult:
         return max(problem_labels, key=self.probability_by_label.__getitem__, default=OK_LABEL)
 
 
-class FastValidator:
-    def __init__(self, decisions_client: OpenAI) -> None:
-        self._decisions_client = decisions_client
-
-    def validate(self, question: str, answer: str, products: list[dict[str, Any]]) -> FastValidationResult:
-        start_time = time.perf_counter()
-        decision = self._decisions_client.decisions.create(
-            model=FAST_VALIDATOR_MODEL,
-            input=format_response_context(question, answer, products),
-            questions=[
-                {
-                    "type": "choice",
-                    "name": FAST_VALIDATION_QUESTION_NAME,
-                    "instructions": FAST_VALIDATION_INSTRUCTIONS,
-                    "choices": FAST_VALIDATION_CHOICES,
-                }
-            ],
-        )
-        choice_answer = next(
-            (answer for answer in decision.answers if answer.name == FAST_VALIDATION_QUESTION_NAME),
-            None,
-        )
-        if choice_answer is None or choice_answer.type != "choice" or not choice_answer.probabilities:
-            answer_type = "no answer" if choice_answer is None else choice_answer.type
-            raise FastValidationError(f"Expected a choice answer with probabilities, got {answer_type}.")
-        return FastValidationResult(
-            probability_by_label={
-                str(choice_probability.value): choice_probability.probability
-                for choice_probability in choice_answer.probabilities
-            },
-            latency_ms=(time.perf_counter() - start_time) * 1000,
-        )
+def run_fast_validation(
+    decisions_client: OpenAI, question: str, answer: str, products: list[dict[str, Any]]
+) -> FastValidationResult:
+    start_time = time.perf_counter()
+    decision = decisions_client.decisions.create(
+        model=FAST_VALIDATOR_MODEL,
+        input=format_response_context(question, answer, products),
+        questions=[
+            {
+                "type": "choice",
+                "name": FAST_VALIDATION_QUESTION_NAME,
+                "instructions": FAST_VALIDATION_INSTRUCTIONS,
+                "choices": FAST_VALIDATION_CHOICES,
+            }
+        ],
+    )
+    choice_answer = next(
+        (answer for answer in decision.answers if answer.name == FAST_VALIDATION_QUESTION_NAME),
+        None,
+    )
+    if choice_answer is None or choice_answer.type != "choice" or not choice_answer.probabilities:
+        answer_type = "no answer" if choice_answer is None else choice_answer.type
+        raise FastValidationError(f"Expected a choice answer with probabilities, got {answer_type}.")
+    return FastValidationResult(
+        probability_by_label={
+            str(choice_probability.value): choice_probability.probability
+            for choice_probability in choice_answer.probabilities
+        },
+        latency_ms=(time.perf_counter() - start_time) * 1000,
+    )

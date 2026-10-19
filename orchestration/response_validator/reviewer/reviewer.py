@@ -34,22 +34,22 @@ class ResponseReview:
         return f"{problem_lines}\nHow to fix: {self.verdict.fix_instructions}"
 
 
-class ResponseReviewer:
-    def __init__(self, reviewer_client: OpenAI) -> None:
-        self._reviewer_client = reviewer_client
-
-    def review(
-        self, question: str, answer: str, flagged_label: str, probability_by_label: dict[str, float]
-    ) -> ResponseReview:
-        start_time = time.perf_counter()
-        response = self._reviewer_client.responses.parse(
-            model=REVIEWER_MODEL,
-            instructions=REVIEWER_INSTRUCTIONS,
-            input=format_reviewer_input(question, answer, flagged_label, probability_by_label),
-            text_format=ResponseReviewVerdict,
-            store=False,
-        )
-        verdict = response.output_parsed
-        if verdict is None:
-            raise ResponseReviewError("Reviewer returned no parsed verdict (e.g. a refusal).")
-        return ResponseReview(verdict=verdict, latency_ms=(time.perf_counter() - start_time) * 1000)
+def review_response(
+    reviewer_client: OpenAI,
+    question: str,
+    answer: str,
+    flagged_label: str,
+    probability_by_label: dict[str, float],
+) -> ResponseReview:
+    start_time = time.perf_counter()
+    response = reviewer_client.responses.parse(
+        model=REVIEWER_MODEL,
+        instructions=REVIEWER_INSTRUCTIONS,
+        input=format_reviewer_input(question, answer, flagged_label, probability_by_label),
+        text_format=ResponseReviewVerdict,
+        store=False,
+    )
+    verdict = response.output_parsed
+    if verdict is None:
+        raise ResponseReviewError("Reviewer returned no parsed verdict (e.g. a refusal).")
+    return ResponseReview(verdict=verdict, latency_ms=(time.perf_counter() - start_time) * 1000)

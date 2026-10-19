@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from orchestration.response_validator.reviewer import ResponseReviewer, ResponseReviewError, ResponseReviewVerdict
+from orchestration.response_validator.reviewer import ResponseReviewError, ResponseReviewVerdict, review_response
 from orchestration.response_validator.reviewer.reviewer import REVIEWER_MODEL
 
 
@@ -26,7 +26,7 @@ def verdict(is_actually_wrong, problems=(), fix_instructions=""):
 def test_single_tool_free_call_with_context_and_flagged_label():
     reviewer_client = FakeReviewerClient(verdict(False))
 
-    review = ResponseReviewer(reviewer_client).review("q", "a", "too_many_products", {"ok": 0.2})
+    review = review_response(reviewer_client, "q", "a", "too_many_products", {"ok": 0.2})
 
     [request] = reviewer_client.requests
     assert request["model"] == REVIEWER_MODEL
@@ -39,7 +39,7 @@ def test_single_tool_free_call_with_context_and_flagged_label():
 def test_wrong_verdict_becomes_review_feedback():
     reviewer_client = FakeReviewerClient(verdict(True, ["4 products listed"], "Keep the best 3."))
 
-    review = ResponseReviewer(reviewer_client).review("q", "a", "too_many_products", {})
+    review = review_response(reviewer_client, "q", "a", "too_many_products", {})
 
     assert review.verdict.is_actually_wrong
     assert review.review_feedback == "- 4 products listed\nHow to fix: Keep the best 3."
@@ -47,4 +47,4 @@ def test_wrong_verdict_becomes_review_feedback():
 
 def test_missing_parsed_verdict_raises():
     with pytest.raises(ResponseReviewError):
-        ResponseReviewer(FakeReviewerClient(None)).review("q", "a", "x", {})
+        review_response(FakeReviewerClient(None), "q", "a", "x", {})

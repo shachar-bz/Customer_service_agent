@@ -2,7 +2,6 @@
 import orchestration.runtime
 from orchestration.main_agent.agent import AgentRun
 from orchestration.response_validator.fast_validator import FastValidationResult
-from orchestration.response_validator.pipeline import ResponseValidationPipeline
 from orchestration.response_validator.reviewer import ResponseReview, ResponseReviewVerdict
 from orchestration.runtime import AgentRuntime, run_customer_service_agent
 
@@ -10,15 +9,13 @@ FAKE_AGENT_CLIENT = object()
 FAKE_REGISTRY = object()
 
 
-class FlaggingFastValidator:
-    def validate(self, question, answer, products):
-        return FastValidationResult({"ok": 0.1, "too_many_products": 0.9}, latency_ms=1.0)
+def flagging_fast_validation(decisions_client, question, answer, products):
+    return FastValidationResult({"ok": 0.1, "too_many_products": 0.9}, latency_ms=1.0)
 
 
-class ConfirmingReviewer:
-    def review(self, question, answer, flagged_label, probability_by_label):
-        verdict = ResponseReviewVerdict(is_actually_wrong=True, problems=["4 products"], fix_instructions="Keep 3.")
-        return ResponseReview(verdict=verdict, latency_ms=1.0)
+def confirming_review(reviewer_client, question, answer, flagged_label, probability_by_label):
+    verdict = ResponseReviewVerdict(is_actually_wrong=True, problems=["4 products"], fix_instructions="Keep 3.")
+    return ResponseReview(verdict=verdict, latency_ms=1.0)
 
 
 def install_fake_runtime(monkeypatch):
@@ -27,7 +24,6 @@ def install_fake_runtime(monkeypatch):
         store_data=object(),
         agent_client=FAKE_AGENT_CLIENT,
         decisions_client=object(),
-        response_validation_pipeline=ResponseValidationPipeline(FlaggingFastValidator(), ConfirmingReviewer()),
     )
     repair_calls = []
 
@@ -43,6 +39,8 @@ def install_fake_runtime(monkeypatch):
     monkeypatch.setattr(orchestration.runtime, "build_tool_registry", lambda *args: FAKE_REGISTRY)
     monkeypatch.setattr(orchestration.runtime, "run_agent", fake_run_agent)
     monkeypatch.setattr(orchestration.runtime, "repair_agent_answer", fake_repair_agent_answer)
+    monkeypatch.setattr(orchestration.runtime, "run_fast_validation", flagging_fast_validation)
+    monkeypatch.setattr(orchestration.runtime, "review_response", confirming_review)
     return repair_calls
 
 

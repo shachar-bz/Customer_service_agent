@@ -2,7 +2,7 @@
 from orchestration.response_validator.fast_validator.fast_validator import (
     FastValidationError,
     FastValidationResult,
-    FastValidator,
+    run_fast_validation,
 )
 from orchestration.response_validator.fast_validator.prompt import OK_LABEL
 
@@ -10,5 +10,5 @@ __all__ = [
     "OK_LABEL",
     "FastValidationError",
     "FastValidationResult",
-    "FastValidator",
+    "run_fast_validation",
 ]
