@@ -31,7 +31,7 @@ def install_fake_runtime(monkeypatch):
         return AgentRun(question=question, final_answer="original")
 
     def fake_repair_agent_answer(agent_run, registry, agent_client, review_feedback):
-        # Deliberately leaves agent_run.final_answer alone: only the return value carries the repair.
+        # Like the real repair: agent_run.final_answer stays the original, only the return value is repaired.
         repair_calls.append((agent_run, registry, agent_client, review_feedback))
         return "repaired"
 

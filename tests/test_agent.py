@@ -139,7 +139,7 @@ def test_repair_resumes_transcript_with_review_feedback():
     repaired_answer = repair_agent_answer(agent_run, registry, agent_client, "- drop product X")
 
     assert repaired_answer == "fixed"
-    assert agent_run.final_answer == "fixed"
+    assert agent_run.final_answer == "first"
     assert agent_run.llm_call_count == 2
     repair_input = agent_client.requests[1]["input"]
     assert repair_input[0] == {"role": "user", "content": "q"}
@@ -158,4 +158,5 @@ def test_repair_only_gets_leftover_llm_budget():
 
     assert agent_run.llm_call_count == LLM_CAP
     assert agent_client.requests[-1]["tool_choice"] == "none"
-    assert repaired_answer == agent_run.final_answer == "forced fix"
+    assert repaired_answer == "forced fix"
+    assert agent_run.final_answer == "first"

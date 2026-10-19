@@ -96,7 +96,7 @@ def run_agent(question: str, registry: ToolRegistry, agent_client: OpenAI) -> Ag
     """One question, one answer: no conversation history beyond this call."""
     agent_run = AgentRun(question=question)
     agent_run.transcript.append({"role": "user", "content": question})
-    _continue_agent_loop(agent_run, registry, agent_client)
+    agent_run.final_answer = _continue_agent_loop(agent_run, registry, agent_client)
     return agent_run
 
 
@@ -104,17 +104,17 @@ def repair_agent_answer(
     agent_run: AgentRun, registry: ToolRegistry, agent_client: OpenAI, review_feedback: str
 ) -> str:
     """Resumes the run with reviewer feedback and returns the repaired answer.
-    Same run, so it extends agent_run's transcript, counters and final_answer.
+    Same run, so it extends agent_run's transcript and counters;
+    agent_run.final_answer stays the original answer.
     Only what is left of LLM_CAP and TOOL_CAP is available to the repair."""
     agent_run.transcript.append(
         {"role": "developer", "content": REPAIR_INSTRUCTION_TEMPLATE.format(review_feedback=review_feedback)}
     )
-    _continue_agent_loop(agent_run, registry, agent_client)
-    return agent_run.final_answer
+    return _continue_agent_loop(agent_run, registry, agent_client)
 
 
-def _continue_agent_loop(agent_run: AgentRun, registry: ToolRegistry, agent_client: OpenAI) -> None:
-    """Runs model/tool turns on agent_run.transcript until an answer, within the run's remaining caps."""
+def _continue_agent_loop(agent_run: AgentRun, registry: ToolRegistry, agent_client: OpenAI) -> str:
+    """Runs model/tool turns on agent_run.transcript until an answer (returned), within the run's remaining caps."""
     start_time = time.perf_counter()
     # Kept locally (store=False): every turn resends the full transcript.
     input_items = agent_run.transcript
@@ -141,9 +141,8 @@ def _continue_agent_loop(agent_run: AgentRun, registry: ToolRegistry, agent_clie
         response = call_model(tool_choice="auto")
         function_calls = [item for item in response.output if item.type == "function_call"]
         if not function_calls:
-            agent_run.final_answer = response.output_text or CAP_REACHED_APOLOGY
             agent_run.total_latency_ms += _elapsed_ms(start_time)
-            return
+            return response.output_text or CAP_REACHED_APOLOGY
 
         for function_call in function_calls:
             tool_result = _run_tool_call(registry, function_call, agent_run)
@@ -152,5 +151,5 @@ def _continue_agent_loop(agent_run: AgentRun, registry: ToolRegistry, agent_clie
     agent_run.stopped_by_cap = True
     input_items.append({"role": "developer", "content": FORCED_ANSWER_INSTRUCTION})
     response = call_model(tool_choice="none")
-    agent_run.final_answer = response.output_text or CAP_REACHED_APOLOGY
     agent_run.total_latency_ms += _elapsed_ms(start_time)
+    return response.output_text or CAP_REACHED_APOLOGY
