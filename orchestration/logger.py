@@ -15,7 +15,7 @@ agent_logger = logging.getLogger("customer_service_agent")
 def ensure_agent_log_handler() -> None:
     if agent_logger.handlers:
         return
-    file_handler = logging.FileHandler(AGENT_LOG_PATH, encoding="utf-8")
+    file_handler = logging.FileHandler(AGENT_LOG_PATH, encoding="utf-8", delay=True)  # delay: an unwritable log never raises
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s\n%(message)s\n"))
     agent_logger.addHandler(file_handler)
     agent_logger.setLevel(logging.INFO)

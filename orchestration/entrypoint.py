@@ -4,7 +4,7 @@ Import-safe: the runtime (data, vector index, tools, OpenAI) loads on the first 
 """
 from __future__ import annotations
 
-from orchestration.logger import log_failure, log_question_outcome
+from orchestration.logger import ensure_agent_log_handler, log_failure, log_question_outcome
 
 FAILURE_ANSWER = (
     "Sorry, something went wrong while answering your question. Please try again later."
@@ -12,6 +12,7 @@ FAILURE_ANSWER = (
 
 
 def answer_question(question: str) -> str:
+    ensure_agent_log_handler()  # before the agent runs, so its warnings reach agent.log
     try:
         # Imported here to keep importing this module cheap.
         from orchestration.runtime import run_customer_service_agent
