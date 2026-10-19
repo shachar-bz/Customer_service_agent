@@ -1,4 +1,4 @@
-"""Builds the text both the fast validator and the reviewer judge: customer message, agent answer, and the products the agent retrieved."""
+"""Builds the text the fast validator judges: customer message, agent answer, and the products the agent retrieved."""
 from __future__ import annotations
 
 import json
