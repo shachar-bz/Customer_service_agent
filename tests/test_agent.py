@@ -1,7 +1,7 @@
 import json
 from types import SimpleNamespace
 
-from orchestration.agent import (
+from orchestration.main_agent.agent import (
     CAP_REACHED_APOLOGY,
     LLM_CAP,
     TOOL_BUDGET_EXHAUSTED_MESSAGE,
@@ -9,7 +9,7 @@ from orchestration.agent import (
     repair_agent_answer,
     run_agent,
 )
-from orchestration.tool_registry import RegisteredTool, ToolRegistry
+from orchestration.main_agent.tool_registry import RegisteredTool, ToolRegistry
 from tools.calculator import CALCULATOR_SCHEMA, CalculatorArgs, calculator
 
 ADD_ARGUMENTS = json.dumps({"expression": "1 + 1"})

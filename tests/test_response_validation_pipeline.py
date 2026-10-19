@@ -1,4 +1,4 @@
-from orchestration.agent import AgentRun
+from orchestration.main_agent.agent import AgentRun
 from orchestration.logger import format_question_outcome
 from orchestration.question_outcome import QuestionOutcome
 from orchestration.response_validator.fast_validator import FastValidationResult

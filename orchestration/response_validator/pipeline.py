@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from orchestration.agent import AgentRun
+from orchestration.main_agent.agent import AgentRun
 from orchestration.response_validator.fast_validator import FastValidationResult, FastValidator
 from orchestration.response_validator.response_context import (
     collect_retrieved_products,

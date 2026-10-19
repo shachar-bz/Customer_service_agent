@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from orchestration.agent import AgentRun
+from orchestration.main_agent.agent import AgentRun
 
 if TYPE_CHECKING:
     # The pipeline module transitively imports openai.

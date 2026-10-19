@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from orchestration.agent import ToolCallRecord
+from orchestration.main_agent.agent import ToolCallRecord
 from orchestration.response_validator.fast_validator import (
     OK_LABEL,
     FastValidationError,

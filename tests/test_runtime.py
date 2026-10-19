@@ -1,6 +1,6 @@
 """Runtime wiring: run_customer_service_agent passes the pipeline's validation and repaired answer into QuestionOutcome. No real OpenAI calls."""
 import orchestration.runtime
-from orchestration.agent import AgentRun
+from orchestration.main_agent.agent import AgentRun
 from orchestration.response_validator.fast_validator import FastValidationResult
 from orchestration.response_validator.pipeline import ResponseValidationPipeline
 from orchestration.response_validator.reviewer import ResponseReview, ResponseReviewVerdict

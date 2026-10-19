@@ -9,13 +9,13 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from data_init.store_data import StoreData, load_store_data
-from orchestration.agent import repair_agent_answer, run_agent
+from orchestration.main_agent.agent import repair_agent_answer, run_agent
 from orchestration.question_outcome import QuestionOutcome
 from orchestration.response_validator.fast_validator import FastValidator
 from orchestration.response_validator.pipeline import ResponseValidationPipeline
 from orchestration.response_validator.reviewer import ResponseReviewer
 from pricing.conversation_session import ConversationSession
-from orchestration.tool_registry import build_tool_registry
+from orchestration.main_agent.tool_registry import build_tool_registry
 from tools.search_products import ProductReranker, ProductSearcher, create_decisions_client
 
 AGENT_API_KEY_ENV_VAR = "OPENAI_API_KEY_AGENT"

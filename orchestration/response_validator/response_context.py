@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from orchestration.agent import ToolCallRecord
+from orchestration.main_agent.agent import ToolCallRecord
 
 NO_PRODUCTS_RETRIEVED = "(no products were retrieved)"
 

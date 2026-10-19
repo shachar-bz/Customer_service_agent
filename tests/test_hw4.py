@@ -36,7 +36,7 @@ def test_success_returns_validated_answer_and_logs_outcome(monkeypatch):
     import orchestration.entrypoint
     import orchestration.runtime
     from hw4 import answer_question
-    from orchestration.agent import AgentRun
+    from orchestration.main_agent.agent import AgentRun
     from orchestration.question_outcome import QuestionOutcome
     from orchestration.response_validator.pipeline import ResponseValidation
 

@@ -6,11 +6,11 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
-from orchestration.prompt import SYSTEM_PROMPT
+from orchestration.main_agent.prompt import SYSTEM_PROMPT
 
 if TYPE_CHECKING:
     from openai import OpenAI
-    from orchestration.tool_registry import ToolRegistry
+    from orchestration.main_agent.tool_registry import ToolRegistry
 
 AGENT_MODEL = "gpt-6.1-sol"
 REASONING_EFFORT = "medium"
