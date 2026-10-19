@@ -3,7 +3,6 @@ import json
 import pytest
 
 from data_init.customer_store import get_cust_data_collection
-from data_init.product_catalog import index_products_by_id, load_product_catalog
 from data_init.store_data import StoreData
 from pricing.conversation_session import ConversationSession
 from orchestration.main_agent.tool_registry import (
@@ -23,7 +22,7 @@ def session():
 @pytest.fixture
 def registry(session):
     store_data = StoreData(
-        products_by_id=index_products_by_id(load_product_catalog()),
+        products_by_id={},
         product_index=None,
         customers=get_cust_data_collection(),
     )
