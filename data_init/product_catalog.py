@@ -31,7 +31,6 @@ class Product(BaseModel):
     list_price: float
     sale_price: float
     brand: str
-    gtin: str
     category: str
     available: bool
 
@@ -59,7 +58,6 @@ def product_from_csv_row(row: dict[str, str]) -> Product:
         list_price=float(row["List Price"]),
         sale_price=float(row["Sale Price"]),
         brand=row["Brand"].strip(),
-        gtin=row["Gtin"].strip(),
         category=row["Category"].strip(),
         available=parse_available(row["Available"]),
     )

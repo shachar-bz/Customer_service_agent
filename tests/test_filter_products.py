@@ -31,7 +31,6 @@ def make_product(
         list_price=sale_price,
         sale_price=sale_price,
         brand=brand,
-        gtin="0",
         category=category,
         available=available,
     )

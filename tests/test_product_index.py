@@ -17,7 +17,6 @@ def make_product(uniq_id: str, name: str, category: str) -> Product:
         list_price=10.0,
         sale_price=10.0,
         brand="TestBrand",
-        gtin="1",
         category=category,
         available=True,
     )

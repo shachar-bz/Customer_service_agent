@@ -30,7 +30,6 @@ def make_product(uniq_id: str, sale_price: float = 100.0) -> Product:
         list_price=sale_price,
         sale_price=sale_price,
         brand="Acme",
-        gtin="0",
         category="Health | Scales",
         available=True,
     )

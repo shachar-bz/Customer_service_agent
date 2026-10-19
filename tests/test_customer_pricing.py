@@ -15,7 +15,6 @@ def make_product(list_price: float, sale_price: float, description: str = "") ->
         list_price=list_price,
         sale_price=sale_price,
         brand="Acme",
-        gtin="0",
         category="Body Weight Scales",
         available=True,
     )

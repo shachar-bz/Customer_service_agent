@@ -47,7 +47,6 @@ def test_parses_row_fields(tmp_path):
     assert product.list_price == 12.50
     assert product.sale_price == 9.99
     assert product.is_on_sale
-    assert product.gtin == "0042"
     assert product.available is False
 
 
