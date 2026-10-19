@@ -40,23 +40,21 @@ class FakeReviewer:
 
 
 class RecordingRepair:
-    def __init__(self, agent_run, repaired_answer="repaired", error=None):
-        self._agent_run = agent_run
+    def __init__(self, repaired_answer="repaired", error=None):
         self._repaired_answer = repaired_answer
         self._error = error
         self.feedback = []
 
     def __call__(self, review_feedback):
         self.feedback.append(review_feedback)
-        self._agent_run.final_answer = "half-written"
         if self._error is not None:
             raise self._error
-        self._agent_run.final_answer = self._repaired_answer
+        return self._repaired_answer
 
 
 def run_pipeline(fast_validator, reviewer, stopped_by_cap=False, repair_error=None):
     agent_run = AgentRun(question="q", final_answer="original", stopped_by_cap=stopped_by_cap)
-    repair = RecordingRepair(agent_run, error=repair_error)
+    repair = RecordingRepair(error=repair_error)
     response_validation = ResponseValidationPipeline(fast_validator, reviewer).validate(agent_run, repair)
     return QuestionOutcome(agent_run=agent_run, response_validation=response_validation), repair
 
@@ -89,6 +87,13 @@ def test_confirmed_problem_is_repaired_once_with_review_feedback():
     assert question_outcome.response_validation.original_answer == "original"
 
 
+def test_pipeline_leaves_agent_run_final_answer_untouched():
+    question_outcome, _ = run_pipeline(FakeFastValidator(ok_probability=0.2), FakeReviewer())
+
+    assert question_outcome.agent_run.final_answer == "original"
+    assert question_outcome.response_validation.final_answer == "repaired"
+
+
 def test_capped_run_is_not_validated():
     fast_validator = FakeFastValidator(ok_probability=0.0)
 
@@ -96,6 +101,17 @@ def test_capped_run_is_not_validated():
 
     assert fast_validator.calls == 0
     assert question_outcome.response_validation.skipped_reason == SKIPPED_STOPPED_BY_CAP
+    assert question_outcome.final_answer == "original"
+
+
+def test_repair_that_raises_keeps_original_answer():
+    question_outcome, repair = run_pipeline(
+        FakeFastValidator(ok_probability=0.1), FakeReviewer(), repair_error=RuntimeError("down")
+    )
+
+    assert len(repair.feedback) == 1
+    assert question_outcome.response_validation.final_answer == "original"
+    assert question_outcome.final_answer == "original"
 
 
 def test_failures_keep_original_answer():

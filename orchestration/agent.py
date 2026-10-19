@@ -100,13 +100,15 @@ def run_agent(question: str, registry: ToolRegistry, agent_client: OpenAI) -> Ag
 
 def repair_agent_answer(
     agent_run: AgentRun, registry: ToolRegistry, agent_client: OpenAI, review_feedback: str
-) -> None:
-    """Resumes the run with reviewer feedback and overwrites final_answer.
+) -> str:
+    """Resumes the run with reviewer feedback and returns the repaired answer.
+    Same run, so it extends agent_run's transcript, counters and final_answer.
     Only what is left of LLM_CAP and TOOL_CAP is available to the repair."""
     agent_run.transcript.append(
         {"role": "developer", "content": REPAIR_INSTRUCTION_TEMPLATE.format(review_feedback=review_feedback)}
     )
     _continue_agent_loop(agent_run, registry, agent_client)
+    return agent_run.final_answer
 
 
 def _continue_agent_loop(agent_run: AgentRun, registry: ToolRegistry, agent_client: OpenAI) -> None:

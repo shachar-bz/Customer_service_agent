@@ -46,8 +46,6 @@ def format_question_outcome(question_outcome: QuestionOutcome) -> str:
 
 def format_response_validation(question_outcome: QuestionOutcome) -> list[str]:
     response_validation = question_outcome.response_validation
-    if response_validation is None:
-        return []
     lines = ["RESPONSE VALIDATION:"]
     if response_validation.skipped_reason is not None:
         lines.append(f"  skipped: {response_validation.skipped_reason}")

@@ -17,6 +17,8 @@ SKIPPED_STOPPED_BY_CAP = "stopped_by_cap: no budget left to repair"
 
 @dataclass
 class ResponseValidation:
+    # The answer the customer gets: the agent's answer, or the repaired one.
+    final_answer: str
     skipped_reason: Optional[str] = None
     fast_validation: Optional[FastValidationResult] = None
     review: Optional[ResponseReview] = None
@@ -31,15 +33,16 @@ class ResponseValidationPipeline:
         self._fast_validator = fast_validator
         self._response_reviewer = response_reviewer
 
-    def validate(self, agent_run: AgentRun, repair_answer: Callable[[str], None]) -> ResponseValidation:
-        """Returns what validation found; may replace agent_run.final_answer. Never raises.
-        repair_answer(review_feedback) must resume the agent and overwrite final_answer."""
-        response_validation = ResponseValidation()
+    def validate(self, agent_run: AgentRun, repair_answer: Callable[[str], str]) -> ResponseValidation:
+        """Returns what validation found, including the answer the customer should get. Never raises.
+        agent_run is read-only input. repair_answer(review_feedback) resumes the agent and returns
+        the repaired answer; if anything fails, final_answer stays the agent's original answer."""
+        original_answer = agent_run.final_answer
+        response_validation = ResponseValidation(final_answer=original_answer)
         if agent_run.stopped_by_cap:
             response_validation.skipped_reason = SKIPPED_STOPPED_BY_CAP
             return response_validation
 
-        original_answer = agent_run.final_answer
         try:
             products = collect_retrieved_products(agent_run.tool_calls)
             fast_validation = self._fast_validator.validate(agent_run.question, original_answer, products)
@@ -56,9 +59,8 @@ class ResponseValidationPipeline:
             if not review.verdict.is_actually_wrong:
                 return response_validation
 
-            repair_answer(review.review_feedback)
+            response_validation.final_answer = repair_answer(review.review_feedback)
             response_validation.original_answer = original_answer
         except Exception as error:
-            agent_run.final_answer = original_answer
             response_validation.error = f"{type(error).__name__}: {error}"
         return response_validation
