@@ -30,3 +30,23 @@ def test_failure_returns_apology_instead_of_raising(monkeypatch):
     monkeypatch.setattr(orchestration.logger.agent_logger, "handlers", [logging.NullHandler()])
 
     assert answer_question("anything") == orchestration.entrypoint.FAILURE_ANSWER
+
+
+def test_success_returns_validated_answer_and_logs_outcome(monkeypatch):
+    import orchestration.entrypoint
+    import orchestration.runtime
+    from hw4 import answer_question
+    from orchestration.agent import AgentRun
+    from orchestration.question_outcome import QuestionOutcome
+    from orchestration.response_validator.pipeline import ResponseValidation
+
+    question_outcome = QuestionOutcome(
+        agent_run=AgentRun(question="anything", final_answer="original"),
+        response_validation=ResponseValidation(final_answer="repaired", original_answer="original"),
+    )
+    logged_outcomes = []
+    monkeypatch.setattr(orchestration.runtime, "run_customer_service_agent", lambda question: question_outcome)
+    monkeypatch.setattr(orchestration.entrypoint, "log_question_outcome", logged_outcomes.append)
+
+    assert answer_question("anything") == "repaired"
+    assert logged_outcomes == [question_outcome]
