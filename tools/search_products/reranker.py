@@ -20,7 +20,7 @@ RERANK_INSTRUCTIONS = (
 
 
 class ProductRerankError(Exception):
-    """The Decisions API answered, but not with a usable choice (e.g. a refusal)."""
+    """The Decisions API answered, but not with a usable predicate answer (e.g. a refusal)."""
 
 
 @dataclass(frozen=True)
