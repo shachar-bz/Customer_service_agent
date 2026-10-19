@@ -14,7 +14,7 @@ import chromadb
 from chromadb.config import Settings
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
-from data_init.product_catalog import Product, load_product_catalog
+from data_init.product_catalog import Product
 
 CHROMA_DATA_DIR = Path(__file__).resolve().parent.parent / "chroma_data"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
