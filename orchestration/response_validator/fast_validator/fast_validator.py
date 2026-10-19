@@ -39,7 +39,8 @@ class FastValidationResult:
 
     @property
     def most_likely_label(self) -> str:
-        return max(self.probability_by_label, key=self.probability_by_label.__getitem__)
+        problem_labels = [label for label in self.probability_by_label if label != OK_LABEL]
+        return max(problem_labels, key=self.probability_by_label.__getitem__, default=OK_LABEL)
 
 
 class FastValidator:

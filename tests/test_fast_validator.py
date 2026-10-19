@@ -72,6 +72,17 @@ def test_low_ok_probability_fails_with_most_likely_problem():
     assert result.most_likely_label == TOO_MANY_PRODUCTS_LABEL
 
 
+def test_most_likely_label_ignores_ok_even_when_it_is_largest():
+    decisions_client = FakeDecisionsClient(
+        [choice_answer({OK_LABEL: 0.45, TOO_MANY_PRODUCTS_LABEL: 0.3, "question_not_answered": 0.25})]
+    )
+
+    result = FastValidator(decisions_client).validate("q", "a", [])
+
+    assert not result.is_ok
+    assert result.most_likely_label == TOO_MANY_PRODUCTS_LABEL
+
+
 @pytest.mark.parametrize(
     "answers",
     [[], [choice_answer({OK_LABEL: 1.0}, answer_type="refusal")], [choice_answer({})]],
