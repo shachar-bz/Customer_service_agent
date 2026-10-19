@@ -31,14 +31,13 @@ class ResponseValidationPipeline:
         self._fast_validator = fast_validator
         self._response_reviewer = response_reviewer
 
-    def validate(self, agent_run: AgentRun, repair_answer: Callable[[str], None]) -> None:
-        """Records a ResponseValidation on agent_run; may replace agent_run.final_answer. Never raises.
+    def validate(self, agent_run: AgentRun, repair_answer: Callable[[str], None]) -> ResponseValidation:
+        """Returns what validation found; may replace agent_run.final_answer. Never raises.
         repair_answer(review_feedback) must resume the agent and overwrite final_answer."""
         response_validation = ResponseValidation()
-        agent_run.response_validation = response_validation
         if agent_run.stopped_by_cap:
             response_validation.skipped_reason = SKIPPED_STOPPED_BY_CAP
-            return
+            return response_validation
 
         original_answer = agent_run.final_answer
         try:
@@ -46,7 +45,7 @@ class ResponseValidationPipeline:
             fast_validation = self._fast_validator.validate(agent_run.question, original_answer, products)
             response_validation.fast_validation = fast_validation
             if fast_validation.is_ok:
-                return
+                return response_validation
 
             review = self._response_reviewer.review(
                 format_response_context(agent_run.question, original_answer, products),
@@ -55,10 +54,11 @@ class ResponseValidationPipeline:
             )
             response_validation.review = review
             if not review.verdict.is_actually_wrong:
-                return
+                return response_validation
 
             repair_answer(review.review_feedback)
             response_validation.original_answer = original_answer
         except Exception as error:
             agent_run.final_answer = original_answer
             response_validation.error = f"{type(error).__name__}: {error}"
+        return response_validation

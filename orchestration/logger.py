@@ -5,7 +5,7 @@ import json
 import logging
 from pathlib import Path
 
-from orchestration.agent import AgentRun
+from orchestration.question_outcome import QuestionOutcome
 
 AGENT_LOG_PATH = Path(__file__).resolve().parent.parent / "agent.log"
 
@@ -22,7 +22,8 @@ def ensure_agent_log_handler() -> None:
     agent_logger.propagate = False
 
 
-def format_agent_run(agent_run: AgentRun) -> str:
+def format_question_outcome(question_outcome: QuestionOutcome) -> str:
+    agent_run = question_outcome.agent_run
     lines = [
         f"QUESTION: {agent_run.question}",
         (
@@ -38,13 +39,13 @@ def format_agent_run(agent_run: AgentRun) -> str:
         if tool_call.error is not None:
             lines.append(f"      ERROR: {tool_call.error}")
         lines.append(f"      RESULT: {json.dumps(tool_call.result, ensure_ascii=False)}")
-    lines.extend(format_response_validation(agent_run))
-    lines.append(f"FINAL ANSWER: {agent_run.final_answer}")
+    lines.extend(format_response_validation(question_outcome))
+    lines.append(f"FINAL ANSWER: {question_outcome.final_answer}")
     return "\n".join(lines)
 
 
-def format_response_validation(agent_run: AgentRun) -> list[str]:
-    response_validation = agent_run.response_validation
+def format_response_validation(question_outcome: QuestionOutcome) -> list[str]:
+    response_validation = question_outcome.response_validation
     if response_validation is None:
         return []
     lines = ["RESPONSE VALIDATION:"]
@@ -72,9 +73,9 @@ def format_response_validation(agent_run: AgentRun) -> list[str]:
     return lines
 
 
-def log_agent_run(agent_run: AgentRun) -> None:
+def log_question_outcome(question_outcome: QuestionOutcome) -> None:
     ensure_agent_log_handler()
-    agent_logger.info(format_agent_run(agent_run))
+    agent_logger.info(format_question_outcome(question_outcome))
 
 
 def log_failure(question: str) -> None:

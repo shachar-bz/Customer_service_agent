@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from data_init.store_data import StoreData, load_store_data
-from orchestration.agent import AgentRun, repair_agent_answer, run_agent
+from orchestration.agent import repair_agent_answer, run_agent
+from orchestration.question_outcome import QuestionOutcome
 from orchestration.response_validator.fast_validator import FastValidator
 from orchestration.response_validator.pipeline import ResponseValidationPipeline
 from orchestration.response_validator.reviewer import ResponseReviewer
@@ -59,7 +60,7 @@ def get_agent_runtime() -> AgentRuntime:
     )
 
 
-def run_customer_service_agent(question: str) -> AgentRun:
+def run_customer_service_agent(question: str) -> QuestionOutcome:
     """Each question gets a fresh session, so premier status never leaks between questions."""
     agent_runtime = get_agent_runtime()
     registry = build_tool_registry(
@@ -67,10 +68,10 @@ def run_customer_service_agent(question: str) -> AgentRun:
     )
     agent_run = run_agent(question, registry, agent_runtime.agent_client)
     # The repair reuses this question's registry, so the session (premier status) carries over.
-    agent_runtime.response_validation_pipeline.validate(
+    response_validation = agent_runtime.response_validation_pipeline.validate(
         agent_run,
         lambda review_feedback: repair_agent_answer(
             agent_run, registry, agent_runtime.agent_client, review_feedback
         ),
     )
-    return agent_run
+    return QuestionOutcome(agent_run=agent_run, response_validation=response_validation)

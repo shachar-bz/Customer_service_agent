@@ -10,8 +10,6 @@ from orchestration.prompt import SYSTEM_PROMPT
 
 if TYPE_CHECKING:
     from openai import OpenAI
-
-    from orchestration.response_validator.pipeline import ResponseValidation
     from orchestration.tool_registry import ToolRegistry
 
 AGENT_MODEL = "gpt-6.1-sol"
@@ -56,8 +54,6 @@ class AgentRun:
     # True when LLM_CAP or TOOL_CAP forced the final answer.
     stopped_by_cap: bool = False
     total_latency_ms: float = 0.0
-    # Set by the response validation pipeline; None when it did not run.
-    response_validation: Optional[ResponseValidation] = None
     # Responses API input items, kept (store=False) so a repair pass can resume the conversation.
     transcript: list[Any] = field(default_factory=list, repr=False)
 
