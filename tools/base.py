@@ -1,9 +1,11 @@
 """Shared contract for agent tools: validate the LLM's arguments with pydantic, then call the tool function."""
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Annotated, Any, Callable
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, StringConstraints, ValidationError
+
+NonBlankStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 def execute_tool(

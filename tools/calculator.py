@@ -7,7 +7,9 @@ import operator
 from decimal import ROUND_HALF_UP, Context, Decimal
 from typing import Any, Callable, Union
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict
+
+from tools.base import NonBlankStr
 
 Number = Union[int, float]
 
@@ -70,15 +72,7 @@ CALCULATOR_SCHEMA = {
 class CalculatorArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    expression: str
-
-    @field_validator("expression")
-    @classmethod
-    def reject_blank_expression(cls, expression: str) -> str:
-        stripped_expression = expression.strip()
-        if not stripped_expression:
-            raise ValueError("must not be blank")
-        return stripped_expression
+    expression: NonBlankStr
 
 
 class CalculatorError(Exception):

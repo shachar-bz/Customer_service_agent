@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict
 
 from pricing.conversation_session import ConversationSession
 from pricing.customer_pricing import priced_product_view
+from tools.base import NonBlankStr
 from tools.search_products.pipeline import SEARCH_RESULT_COUNT, ProductSearcher
 
 SEARCH_PRODUCTS_SCHEMA = {
@@ -42,15 +43,7 @@ SEARCH_PRODUCTS_SCHEMA = {
 class SearchProductsArgs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    query: str
-
-    @field_validator("query")
-    @classmethod
-    def strip_query(cls, query: str) -> str:
-        stripped_query = query.strip()
-        if not stripped_query:
-            raise ValueError("must not be blank")
-        return stripped_query
+    query: NonBlankStr
 
 
 def search_products(
