@@ -7,7 +7,7 @@ from typing import Any
 
 from openai import OpenAI
 
-from orchestration.response_validator.fast_validator.prompt import (
+from orchestration.response_validator.fast_validator_prompt import (
     FAST_VALIDATION_CHOICES,
     FAST_VALIDATION_INSTRUCTIONS,
     OK_LABEL,

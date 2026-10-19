@@ -137,8 +137,8 @@ def test_no_matches_returns_empty_list_with_note(session):
 def test_no_filter_returns_error(session):
     run_filter = make_runner([make_product("p1")], session)
 
-    assert run_filter({}) == {"error": NO_FILTER_MESSAGE}
-    assert run_filter({"available": True}) == {"error": NO_FILTER_MESSAGE}
+    assert NO_FILTER_MESSAGE in run_filter({})["error"]
+    assert NO_FILTER_MESSAGE in run_filter({"available": True})["error"]
 
 
 @pytest.mark.parametrize(

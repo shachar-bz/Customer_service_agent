@@ -56,15 +56,13 @@ def test_unknown_tool_returns_error(registry):
     assert "Unknown tool" in registry.dispatch("delete_everything", "{}")["error"]
 
 
-@pytest.mark.parametrize("raw_arguments_json", ["not json", "[1, 2]"])
-def test_malformed_arguments_return_error(registry, raw_arguments_json):
-    assert registry.dispatch("calculator", raw_arguments_json) == {
-        "error": INVALID_ARGUMENTS_JSON_MESSAGE
-    }
+def test_malformed_json_returns_error(registry):
+    assert registry.dispatch("calculator", "not json") == {"error": INVALID_ARGUMENTS_JSON_MESSAGE}
 
 
-def test_invalid_arguments_return_validation_error(registry):
-    assert "Invalid arguments" in registry.dispatch("calculator", "{}")["error"]
+@pytest.mark.parametrize("raw_arguments_json", ["{}", "[1, 2]"])
+def test_invalid_arguments_return_validation_error(registry, raw_arguments_json):
+    assert "Invalid arguments" in registry.dispatch("calculator", raw_arguments_json)["error"]
 
 
 def test_tool_exception_is_returned_as_error():

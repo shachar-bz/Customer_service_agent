@@ -100,9 +100,9 @@ class FilterProductsArgs(BaseModel):
     max_price_inclusive: Optional[float] = Field(default=None, ge=0)
     min_price_exclusive: Optional[float] = Field(default=None, ge=0)
     min_price_inclusive: Optional[float] = Field(default=None, ge=0)
-    brand: Optional[str] = Field(default=None, min_length=1)
+    brand: Optional[str] = None
     categories: Optional[list[str]] = Field(default=None, min_length=1)
-    name_contains: Optional[str] = Field(default=None, min_length=1)
+    name_contains: Optional[str] = None
     available: bool = True
 
     @field_validator("brand", "name_contains")
@@ -136,6 +136,13 @@ class FilterProductsArgs(BaseModel):
         lower_bound = self.min_price_exclusive if self.min_price_exclusive is not None else self.min_price_inclusive
         if upper_bound is not None and lower_bound is not None and lower_bound > upper_bound:
             raise ValueError("the minimum price must not exceed the maximum price")
+        return self
+
+    @model_validator(mode="after")
+    def require_at_least_one_filter(self) -> FilterProductsArgs:
+        # Only available=true (the default) and no constraints: nothing to filter on.
+        if not self.model_dump(exclude_defaults=True):
+            raise ValueError(NO_FILTER_MESSAGE)
         return self
 
 
@@ -174,21 +181,6 @@ def filter_products(
     available: bool,
 ) -> dict[str, Any]:
     """Text arguments arrive already lowercased and trimmed by FilterProductsArgs."""
-    has_explicit_filter = available is False or any(
-        value is not None
-        for value in (
-            max_price_exclusive,
-            max_price_inclusive,
-            min_price_exclusive,
-            min_price_inclusive,
-            brand,
-            categories,
-            name_contains,
-        )
-    )
-    if not has_explicit_filter:
-        return {"error": NO_FILTER_MESSAGE}
-
     discount_rate = session.discount_rate
     matching_products = [
         product

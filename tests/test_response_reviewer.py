@@ -2,8 +2,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from orchestration.response_validator.reviewer import ResponseReviewError, ResponseReviewVerdict, review_response
-from orchestration.response_validator.reviewer.reviewer import REVIEWER_MODEL
+from orchestration.response_validator.reviewer import (
+    REVIEWER_MODEL,
+    ResponseReviewError,
+    ResponseReviewVerdict,
+    review_response,
+)
 
 
 class FakeReviewerClient:

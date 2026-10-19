@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from openai import OpenAI
 from pydantic import BaseModel
 
-from orchestration.response_validator.reviewer.prompt import REVIEWER_INSTRUCTIONS, format_reviewer_input
+from orchestration.response_validator.reviewer_prompt import REVIEWER_INSTRUCTIONS, format_reviewer_input
 
 REVIEWER_MODEL = "gpt-6-luna"
 

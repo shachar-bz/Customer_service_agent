@@ -5,11 +5,11 @@ import pytest
 from orchestration.main_agent.agent import ToolCallRecord
 from orchestration.response_validator.fast_validator import (
     OK_LABEL,
+    FAST_VALIDATION_QUESTION_NAME,
     FastValidationError,
     run_fast_validation,
 )
-from orchestration.response_validator.fast_validator.fast_validator import FAST_VALIDATION_QUESTION_NAME
-from orchestration.response_validator.fast_validator.prompt import (
+from orchestration.response_validator.fast_validator_prompt import (
     FAST_VALIDATION_CHOICES,
     TOO_MANY_PRODUCTS_LABEL,
 )

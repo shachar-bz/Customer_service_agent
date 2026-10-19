@@ -53,8 +53,6 @@ class ToolRegistry:
             raw_args = json.loads(raw_arguments_json or "{}")
         except json.JSONDecodeError:
             return {"error": INVALID_ARGUMENTS_JSON_MESSAGE}
-        if not isinstance(raw_args, dict):
-            return {"error": INVALID_ARGUMENTS_JSON_MESSAGE}
 
         try:
             return execute_tool(tool.args_model, tool.function, raw_args)
