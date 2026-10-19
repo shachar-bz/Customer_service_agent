@@ -23,19 +23,19 @@ policies.
 
 ## Setup
 
-1. Download all 7 files from this gist into a single directory.
+Run these from the repo root.
 
-2. Install the dependencies:
+1. Install the dependencies:
    ```
-   pip install kagglehub pandas mongomock chromadb sentence-transformers openai
+   pip install -r requirements.txt
    ```
 
-3. Generate the product catalog:
+2. Generate the product catalog:
    ```
-   python fetch_product_data.py
+   python assignment_prep/fetch_product_data.py
    ```
-   You should see:
-   `Wrote product_data.csv with 787 rows (N guaranteed-keep).`
+   It writes `product_data.csv` to the repo root. You should see:
+   `Wrote product_data.csv with 787 rows (N named-product rows guaranteed-kept).`
 
    **No Kaggle account or API key is required.** The script downloads the public
    dataset anonymously through `kagglehub`. You do not need to sign up, log in, or
@@ -47,14 +47,12 @@ policies.
    `chmod 600 ~/.kaggle/kaggle.json`, and re-run the script. This is only a
    fallback — the normal path needs no credentials.
 
-4. Verify everything is in place:
+3. Verify everything is in place:
    ```
-   python prepare_dataset.py
+   python assignment_prep/prepare_dataset.py
    ```
    You should see:
    `All required files found. You are ready to start working on hw4.py.`
-
-5. Place your `hw4.py` (your agent) in the same directory and run it.
 
 ## The three data sources
 

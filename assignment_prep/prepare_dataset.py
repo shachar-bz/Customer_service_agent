@@ -4,6 +4,8 @@ import os, sys, csv
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Files may live next to this script (assignment_prep/) or one level up (repo root).
 SEARCH_DIRS = [SCRIPT_DIR, os.path.dirname(SCRIPT_DIR)]
+# The agent reads the catalog only from the repo root (see data_init/product_catalog.py).
+PRODUCT_CSV_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), "product_data.csv")
 REQUIRED = ["fetch_product_data.py","customers.json",
             "policies.txt","example_queries.txt","README.md"]
 
@@ -17,11 +19,10 @@ def find_file(name):
 def main():
     missing = [f for f in REQUIRED if find_file(f) is None]
     if missing: sys.exit(f"Missing gist files: {missing}")
-    product_csv_path = find_file("product_data.csv")
-    if product_csv_path is None:
-        sys.exit("product_data.csv not found. Run: python fetch_product_data.py "
+    if not os.path.exists(PRODUCT_CSV_PATH):
+        sys.exit("product_data.csv not found. Run: python assignment_prep/fetch_product_data.py "
                  "(no Kaggle credentials needed — see README.md).")
-    with open(product_csv_path, newline="", encoding="utf-8") as f:
+    with open(PRODUCT_CSV_PATH, newline="", encoding="utf-8") as f:
         rows = list(csv.reader(f))
     header, data = rows[0], rows[1:]
     need = ["Uniq Id","Product Name","Description","List Price","Sale Price",

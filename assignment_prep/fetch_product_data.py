@@ -12,6 +12,8 @@ import os, sys
 import pandas as pd
 
 TARGET_ROWS = 787
+# Write to the repo root, where data_init/product_catalog.py reads it, whatever the cwd.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SLUG = "promptcloud/walmart-product-data-2019"
 COLUMNS = ["Uniq Id", "Product Name", "Description", "List Price",
            "Sale Price", "Brand", "Gtin", "Category", "Available"]
@@ -88,7 +90,7 @@ def main():
 
     guaranteed = int(named.sum())
     out = df.loc[keep_idx[:TARGET_ROWS]].reset_index(drop=True)
-    out.to_csv("product_data.csv", index=False)
+    out.to_csv(os.path.join(REPO_ROOT, "product_data.csv"), index=False)
     print(f"Wrote product_data.csv with {len(out)} rows "
           f"({guaranteed} named-product rows guaranteed-kept).")
 
