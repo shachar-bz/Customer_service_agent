@@ -1,19 +1,39 @@
-"""Reviews an answer the fast validator flagged: one gpt-6-luna Responses API call, no tools, returning a structured verdict."""
+"""Reviews an answer the fast validator flagged: one gpt-6-luna Responses API call, no tools, returning a structured verdict (model + its strict JSON schema)."""
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass
 
 from openai import OpenAI
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from orchestration.response_validator.reviewer.prompt import REVIEWER_INSTRUCTIONS, format_reviewer_input
-from orchestration.response_validator.reviewer.response_format import (
-    RESPONSE_REVIEW_TEXT_FORMAT,
-    ResponseReviewVerdict,
-)
 
 REVIEWER_MODEL = "gpt-6-luna"
+RESPONSE_REVIEW_FORMAT_NAME = "response_review"
+
+RESPONSE_REVIEW_TEXT_FORMAT = {
+    "type": "json_schema",
+    "name": RESPONSE_REVIEW_FORMAT_NAME,
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "is_actually_wrong": {"type": "boolean"},
+            "problems": {"type": "array", "items": {"type": "string"}},
+            "fix_instructions": {"type": "string"},
+        },
+        "required": ["is_actually_wrong", "problems", "fix_instructions"],
+        "additionalProperties": False,
+    },
+}
+
+
+class ResponseReviewVerdict(BaseModel):
+    """Must mirror RESPONSE_REVIEW_TEXT_FORMAT's schema."""
+    is_actually_wrong: bool
+    problems: list[str]
+    fix_instructions: str
 
 
 class ResponseReviewError(Exception):
