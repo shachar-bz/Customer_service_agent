@@ -25,14 +25,14 @@ FILTER_PRODUCTS_SCHEMA = {
     "type": "function",
     "name": "filter_products",
     "description": (
-        """Find products that satisfy hard constraints. Every argument is optional, and all
+        f"""Find products that satisfy hard constraints. Every argument is optional, and all
             given constraints are combined with AND (a product must satisfy every one).
             Call this whenever the customer states a hard constraint: a price limit, a brand,
             a category, a product name, or availability.
             Prices are compared against the customer price, which already includes the
             premier discount for a premier customer.
             For "X or Y" requests, call this tool once per alternative and merge the results.
-            Returns at most 10 products; if more match, a note gives the total."""
+            Returns at most {MAX_FILTER_RESULTS} products; if more match, a note gives the total."""
     ),
     "parameters": {
         "type": "object",
