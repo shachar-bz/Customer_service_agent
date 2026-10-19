@@ -16,9 +16,10 @@ from orchestration.response_validator.pipeline import ResponseValidationPipeline
 from orchestration.response_validator.reviewer import ResponseReviewer
 from pricing.conversation_session import ConversationSession
 from orchestration.main_agent.tool_registry import build_tool_registry
-from tools.search_products import ProductReranker, ProductSearcher, create_decisions_client
+from tools.search_products import ProductReranker, ProductSearcher
 
 AGENT_API_KEY_ENV_VAR = "OPENAI_API_KEY_AGENT"
+DECISIONS_API_KEY_ENV_VAR = "OPENAI_API_KEY_DECISIONS"
 
 
 @dataclass(frozen=True)
@@ -30,11 +31,11 @@ class AgentRuntime:
     response_validation_pipeline: ResponseValidationPipeline
 
 
-def create_agent_client() -> OpenAI:
+def create_openai_client(api_key_env_var: str) -> OpenAI:
     load_dotenv()
-    api_key = os.environ.get(AGENT_API_KEY_ENV_VAR)
+    api_key = os.environ.get(api_key_env_var)
     if not api_key:
-        raise RuntimeError(f"{AGENT_API_KEY_ENV_VAR} is not set (see .env).")
+        raise RuntimeError(f"{api_key_env_var} is not set (see .env).")
     return OpenAI(api_key=api_key)
 
 
@@ -42,8 +43,8 @@ def create_agent_client() -> OpenAI:
 def get_agent_runtime() -> AgentRuntime:
     """Built on the first question (slow: may embed the catalog). A failed build is not cached."""
     store_data = load_store_data()
-    decisions_client = create_decisions_client()
-    agent_client = create_agent_client()
+    decisions_client = create_openai_client(DECISIONS_API_KEY_ENV_VAR)
+    agent_client = create_openai_client(AGENT_API_KEY_ENV_VAR)
     product_searcher = ProductSearcher(
         store_data.product_index,
         store_data.products_by_id,

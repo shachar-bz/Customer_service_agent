@@ -1,18 +1,15 @@
 """Reranks retrieved products against a shopping need with one OpenAI Decisions API predicate question per product."""
 from __future__ import annotations
 
-import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
-from dotenv import load_dotenv
 from openai import OpenAI
 
 from data_init.product_catalog import Product
 from data_init.product_index import product_embedding_text
 
 DECISIONS_MODEL = "gpt-6-luna"
-DECISIONS_API_KEY_ENV_VAR = "OPENAI_API_KEY_DECISIONS"
 RERANK_QUESTION_NAME = "product_satisfies_need"
 RERANK_INSTRUCTIONS = (
     "The input is a shopper's need and one product. Does the product satisfy the need?"
@@ -28,14 +25,6 @@ class RerankedProduct:
     uniq_id: str
     # Probability the Decisions API gave that this product satisfies the need.
     relevance_probability: float
-
-
-def create_decisions_client() -> OpenAI:
-    load_dotenv()
-    api_key = os.environ.get(DECISIONS_API_KEY_ENV_VAR)
-    if not api_key:
-        raise RuntimeError(f"{DECISIONS_API_KEY_ENV_VAR} is not set (see .env).")
-    return OpenAI(api_key=api_key)
 
 
 class ProductReranker:
