@@ -6,11 +6,11 @@ from typing import Any, Callable, Optional
 
 from orchestration.main_agent.agent import AgentRun
 from orchestration.response_validator.fast_validator import FastValidationResult
-from orchestration.response_validator.response_context import collect_customer_interests, collect_retrieved_products
+from orchestration.response_validator.response_context import collect_customer_interests, collect_recommended_products
 from orchestration.response_validator.reviewer import ResponseReview
 
-# (question, answer, retrieved products) -> fast validation; e.g. run_fast_validation with its client bound.
-FastValidate = Callable[[str, str, list[dict[str, Any]]], FastValidationResult]
+# (question, answer, recommended products, customer interests) -> fast validation; e.g. run_fast_validation with its client bound.
+FastValidate = Callable[[str, str, list[dict[str, Any]], list[str]], FastValidationResult]
 # (question, answer, flagged label, probabilities, customer interests) -> review; e.g. review_response with its client bound.
 ReviewResponse = Callable[[str, str, str, dict[str, float], list[str]], ResponseReview]
 
@@ -43,8 +43,9 @@ def validate_response(
         return response_validation
 
     try:
-        products = collect_retrieved_products(agent_run.tool_calls)
-        fast_validation = fast_validate(agent_run.question, original_answer, products)
+        customer_interests = collect_customer_interests(agent_run.tool_calls)
+        products = collect_recommended_products(agent_run.tool_calls, original_answer)
+        fast_validation = fast_validate(agent_run.question, original_answer, products, customer_interests)
         response_validation.fast_validation = fast_validation
         if fast_validation.is_ok:
             return response_validation
@@ -54,7 +55,7 @@ def validate_response(
             original_answer,
             fast_validation.most_likely_label,
             fast_validation.probability_by_label,
-            collect_customer_interests(agent_run.tool_calls),
+            customer_interests,
         )
         response_validation.review = review
         if not review.verdict.is_actually_wrong:

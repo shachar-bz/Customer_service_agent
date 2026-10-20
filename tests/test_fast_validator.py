@@ -14,7 +14,8 @@ from orchestration.response_validator.fast_validator_prompt import (
     TOO_MANY_PRODUCTS_LABEL,
 )
 from orchestration.response_validator.response_context import (
-    NO_PRODUCTS_RETRIEVED,
+    NO_PRODUCTS_RECOMMENDED,
+    collect_recommended_products,
     collect_retrieved_products,
     format_response_context,
 )
@@ -45,7 +46,7 @@ class FakeDecisionsClient:
 def test_sends_one_choice_question_with_all_labels_and_context():
     decisions_client = FakeDecisionsClient([choice_answer({OK_LABEL: 0.9})])
 
-    run_fast_validation(decisions_client, "need a mug", "1. Mug - $5", [{"product_id": "p1"}])
+    run_fast_validation(decisions_client, "need a mug", "1. Mug - $5", [{"product_id": "p1"}], ["Mugs"])
 
     [request] = decisions_client.requests
     [question] = request["questions"]
@@ -53,12 +54,13 @@ def test_sends_one_choice_question_with_all_labels_and_context():
     assert question["choices"] == FAST_VALIDATION_CHOICES
     assert "need a mug" in request["input"] and "1. Mug - $5" in request["input"]
     assert '"product_id": "p1"' in request["input"]
+    assert "Customer product interests: Mugs" in request["input"]
 
 
 def test_ok_probability_at_threshold_passes():
     decisions_client = FakeDecisionsClient([choice_answer({OK_LABEL: 0.5, TOO_MANY_PRODUCTS_LABEL: 0.5})])
 
-    result = run_fast_validation(decisions_client, "q", "a", [])
+    result = run_fast_validation(decisions_client, "q", "a", [], [])
 
     assert result.is_ok
 
@@ -66,7 +68,7 @@ def test_ok_probability_at_threshold_passes():
 def test_low_ok_probability_fails_with_most_likely_problem():
     decisions_client = FakeDecisionsClient([choice_answer({OK_LABEL: 0.3, TOO_MANY_PRODUCTS_LABEL: 0.7})])
 
-    result = run_fast_validation(decisions_client, "q", "a", [])
+    result = run_fast_validation(decisions_client, "q", "a", [], [])
 
     assert not result.is_ok
     assert result.most_likely_label == TOO_MANY_PRODUCTS_LABEL
@@ -77,7 +79,7 @@ def test_most_likely_label_ignores_ok_even_when_it_is_largest():
         [choice_answer({OK_LABEL: 0.45, TOO_MANY_PRODUCTS_LABEL: 0.3, "question_not_answered": 0.25})]
     )
 
-    result = run_fast_validation(decisions_client, "q", "a", [])
+    result = run_fast_validation(decisions_client, "q", "a", [], [])
 
     assert not result.is_ok
     assert result.most_likely_label == TOO_MANY_PRODUCTS_LABEL
@@ -89,7 +91,7 @@ def test_most_likely_label_ignores_ok_even_when_it_is_largest():
 )
 def test_unusable_answer_raises(answers):
     with pytest.raises(FastValidationError):
-        run_fast_validation(FakeDecisionsClient(answers), "q", "a", [])
+        run_fast_validation(FakeDecisionsClient(answers), "q", "a", [], [])
 
 
 def tool_call_with_products(*product_ids):
@@ -110,5 +112,14 @@ def test_collects_products_once_in_retrieval_order():
     assert [product["product_id"] for product in products] == ["a", "b", "c"]
 
 
-def test_context_says_when_no_products_were_retrieved():
-    assert NO_PRODUCTS_RETRIEVED in format_response_context("q", "a", [])
+def test_only_products_named_in_answer_are_recommended():
+    tool_calls = [tool_call_with_products("a", "b", "c")]
+
+    products = collect_recommended_products(tool_calls, "1. b - $5\n2. c - $6")
+
+    assert [product["product_id"] for product in products] == ["b", "c"]
+
+
+def test_context_says_when_no_products_were_recommended():
+    context = format_response_context("q", "a", [], [])
+    assert NO_PRODUCTS_RECOMMENDED in context and "interests" not in context

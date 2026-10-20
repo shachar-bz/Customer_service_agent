@@ -44,12 +44,13 @@ class FastValidationResult:
 
 
 def run_fast_validation(
-    decisions_client: OpenAI, question: str, answer: str, products: list[dict[str, Any]]
+    decisions_client: OpenAI, question: str, answer: str, products: list[dict[str, Any]],
+    customer_interests: list[str],
 ) -> FastValidationResult:
     start_time = time.perf_counter()
     decision = decisions_client.decisions.create(
         model=FAST_VALIDATOR_MODEL,
-        input=format_response_context(question, answer, products),
+        input=format_response_context(question, answer, products, customer_interests),
         questions=[
             {
                 "type": "choice",

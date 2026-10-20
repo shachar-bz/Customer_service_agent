@@ -12,7 +12,7 @@ class FakeFastValidator:
         self._error = error
         self.calls = 0
 
-    def __call__(self, question, answer, products):
+    def __call__(self, question, answer, products, customer_interests):
         self.calls += 1
         if self._error is not None:
             raise self._error

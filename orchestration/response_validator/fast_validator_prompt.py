@@ -8,7 +8,7 @@ QUESTION_NOT_ANSWERED_LABEL = "question_not_answered"
 
 FAST_VALIDATION_INSTRUCTIONS = (
     "The input is a customer's message to an online store's customer-service agent, the agent's "
-    "answer, and the product data the agent retrieved from the catalog. Store rules: suggest at "
+    "answer, the customer's product interests (when looked up), and the catalog data of the products the answer recommends. Store rules: suggest at "
     "most the number of products the customer asks for and never more than 3; recommend only "
     "available products; quote customer_price as the price. Which choice best describes the answer?"
 )
@@ -40,8 +40,8 @@ FAST_VALIDATION_CHOICES = [
         "value": QUESTION_NOT_ANSWERED_LABEL,
         "description": (
             "The answer misses or wrongly answers a part of the customer's message, such as a "
-            "policy, premier-status or calculation question, or says no product fits when the "
-            "product data has one that does."
+            "policy, premier-status or calculation question, or recommends products that are "
+            "outside the customer's product interests when the customer asked for interest-based recommendations."
         ),
     },
 ]

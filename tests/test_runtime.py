@@ -9,7 +9,7 @@ FAKE_AGENT_CLIENT = object()
 FAKE_REGISTRY = object()
 
 
-def flagging_fast_validation(decisions_client, question, answer, products):
+def flagging_fast_validation(decisions_client, question, answer, products, customer_interests):
     return FastValidationResult({"ok": 0.1, "too_many_products": 0.9}, latency_ms=1.0)
 
 
