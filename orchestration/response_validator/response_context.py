@@ -18,6 +18,15 @@ def collect_retrieved_products(tool_calls: list[ToolCallRecord]) -> list[dict[st
     return list(products_by_id.values())
 
 
+def collect_customer_interests(tool_calls: list[ToolCallRecord]) -> list[str]:
+    """Product interests from every get_customer lookup, deduplicated, in lookup order."""
+    interests: dict[str, None] = {}
+    for tool_call in tool_calls:
+        if tool_call.tool_name == "get_customer":
+            interests.update(dict.fromkeys(tool_call.result.get("product_interests", [])))
+    return list(interests)
+
+
 def format_response_context(question: str, answer: str, products: list[dict[str, Any]]) -> str:
     product_lines = (
         "\n".join(json.dumps(product, ensure_ascii=False) for product in products)

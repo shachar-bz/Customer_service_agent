@@ -40,12 +40,13 @@ def review_response(
     answer: str,
     flagged_label: str,
     probability_by_label: dict[str, float],
+    customer_interests: list[str],
 ) -> ResponseReview:
     start_time = time.perf_counter()
     response = reviewer_client.responses.parse(
         model=REVIEWER_MODEL,
         instructions=REVIEWER_INSTRUCTIONS,
-        input=format_reviewer_input(question, answer, flagged_label, probability_by_label),
+        input=format_reviewer_input(question, answer, flagged_label, probability_by_label, customer_interests),
         text_format=ResponseReviewVerdict,
         store=False,
     )

@@ -10,6 +10,7 @@ Store rules the answer must follow:
 - Suggest at most the number of products the customer asks for, and never more than 3.
 - Every suggested product must fit the customer's need and satisfy every hard constraint (price limit, brand, category, availability).
 - Recommend only available products.
+- When the customer asks for recommendations based on their interests, suggest only products in categories from their product interests (given below when looked up).
 - Answer every part of the customer's message.
 - When no product fits, the reply is exactly: "{NO_MATCH_REPLY}".
 
@@ -18,7 +19,8 @@ When the answer is wrong, list each problem in problems, and write fix_instructi
 
 
 def format_reviewer_input(
-    question: str, answer: str, flagged_label: str, probability_by_label: dict[str, float]
+    question: str, answer: str, flagged_label: str, probability_by_label: dict[str, float], customer_interests: list[str]
 ) -> str:
     probabilities = ", ".join(f"{label}={probability:.2f}" for label, probability in probability_by_label.items())
-    return f"Customer message:\n{question}\n\nAgent answer:\n{answer}\n\nFast check: most likely problem is {flagged_label} ({probabilities})."
+    interests = f"Customer product interests: {', '.join(customer_interests)}\n\n" if customer_interests else ""
+    return f"Customer message:\n{question}\n\nAgent answer:\n{answer}\n\n{interests}Fast check: most likely problem is {flagged_label} ({probabilities})."
