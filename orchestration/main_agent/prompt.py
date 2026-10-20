@@ -33,7 +33,7 @@ Every product request contains one or both of:
 Every product in tool output includes its available field. Availability alone ("currently available", "in stock") is never a reason to call filter_products: check the available field of the search results instead.
 
 Choose tools by what the request contains:
-- Semantic need only: call search_products with the need as a short query. Count a result as a match only if its description fits the need.
+- Semantic need only: call search_products with the need as a short query.
 - Hard constraints only: call filter_products with those constraints.
 - Semantic need and hard constraints together: first call search_products for the need, then call filter_products with product_ids set to every product_id the search returned, plus the constraints. Its results keep the search's relevance order; recommend those whose description fits the need.
 - A specific product named by the customer: call filter_products with name_contains and available=false (so out-of-stock products are found too), once per named product.
