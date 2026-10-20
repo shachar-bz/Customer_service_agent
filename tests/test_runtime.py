@@ -13,7 +13,9 @@ def flagging_fast_validation(decisions_client, question, answer, products, custo
     return FastValidationResult({"ok": 0.1, "too_many_products": 0.9}, latency_ms=1.0)
 
 
-def confirming_review(reviewer_client, question, answer, flagged_label, probability_by_label, customer_interests):
+def confirming_review(
+    reviewer_client, question, answer, flagged_label, probability_by_label, customer_interests, retrieved_products
+):
     verdict = ResponseReviewVerdict(is_actually_wrong=True, problems=["4 products"], fix_instructions="Keep 3.")
     return ResponseReview(verdict=verdict, latency_ms=1.0)
 

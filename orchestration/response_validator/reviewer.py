@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from typing import Any
 
 from openai import OpenAI
 from pydantic import BaseModel
@@ -41,12 +42,15 @@ def review_response(
     flagged_label: str,
     probability_by_label: dict[str, float],
     customer_interests: list[str],
+    retrieved_products: list[dict[str, Any]],
 ) -> ResponseReview:
     start_time = time.perf_counter()
     response = reviewer_client.responses.parse(
         model=REVIEWER_MODEL,
         instructions=REVIEWER_INSTRUCTIONS,
-        input=format_reviewer_input(question, answer, flagged_label, probability_by_label, customer_interests),
+        input=format_reviewer_input(
+            question, answer, flagged_label, probability_by_label, customer_interests, retrieved_products
+        ),
         text_format=ResponseReviewVerdict,
         store=False,
     )

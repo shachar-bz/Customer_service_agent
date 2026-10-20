@@ -33,14 +33,15 @@ def collect_recommended_products(tool_calls: list[ToolCallRecord], answer: str) 
     return [product for product in collect_retrieved_products(tool_calls) if product["name"] in answer]
 
 
+def format_product_lines(products: list[dict[str, Any]]) -> str:
+    """One JSON object per line."""
+    return "\n".join(json.dumps(product, ensure_ascii=False) for product in products)
+
+
 def format_response_context(
     question: str, answer: str, products: list[dict[str, Any]], customer_interests: list[str]
 ) -> str:
-    product_lines = (
-        "\n".join(json.dumps(product, ensure_ascii=False) for product in products)
-        if products
-        else NO_PRODUCTS_RECOMMENDED
-    )
+    product_lines = format_product_lines(products) if products else NO_PRODUCTS_RECOMMENDED
     interests = f"Customer product interests: {', '.join(customer_interests)}\n\n" if customer_interests else ""
     return (
         f"Customer message:\n{question}\n\n"

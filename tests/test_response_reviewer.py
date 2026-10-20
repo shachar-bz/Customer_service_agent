@@ -8,6 +8,7 @@ from orchestration.response_validator.reviewer import (
     ResponseReviewVerdict,
     review_response,
 )
+from orchestration.response_validator.reviewer_prompt import NO_PRODUCTS_RETRIEVED
 
 
 class FakeReviewerClient:
@@ -30,7 +31,11 @@ def verdict(is_actually_wrong, problems=(), fix_instructions=""):
 def test_single_tool_free_call_with_context_and_flagged_label():
     reviewer_client = FakeReviewerClient(verdict(False))
 
-    review = review_response(reviewer_client, "q", "a", "too_many_products", {"ok": 0.2}, ["Bikes"])
+    retrieved_products = [{"product_id": 123, "name": "Bolle Volt Plus Snow Goggles", "available": True}]
+
+    review = review_response(
+        reviewer_client, "q", "a", "too_many_products", {"ok": 0.2}, ["Bikes"], retrieved_products
+    )
 
     [request] = reviewer_client.requests
     assert request["model"] == REVIEWER_MODEL
@@ -38,13 +43,23 @@ def test_single_tool_free_call_with_context_and_flagged_label():
     assert request["text_format"] is ResponseReviewVerdict
     assert "Customer message" in request["input"] and "too_many_products" in request["input"]
     assert "Customer product interests: Bikes" in request["input"]
+    assert '"name": "Bolle Volt Plus Snow Goggles"' in request["input"]
     assert not review.verdict.is_actually_wrong
+
+
+def test_no_retrieved_products_is_stated():
+    reviewer_client = FakeReviewerClient(verdict(False))
+
+    review_response(reviewer_client, "q", "a", "x", {}, [], [])
+
+    [request] = reviewer_client.requests
+    assert NO_PRODUCTS_RETRIEVED in request["input"]
 
 
 def test_wrong_verdict_becomes_review_feedback():
     reviewer_client = FakeReviewerClient(verdict(True, ["4 products listed"], "Keep the best 3."))
 
-    review = review_response(reviewer_client, "q", "a", "too_many_products", {}, [])
+    review = review_response(reviewer_client, "q", "a", "too_many_products", {}, [], [])
 
     assert review.verdict.is_actually_wrong
     assert review.review_feedback == "- 4 products listed\nHow to fix: Keep the best 3."
@@ -52,4 +67,4 @@ def test_wrong_verdict_becomes_review_feedback():
 
 def test_missing_parsed_verdict_raises():
     with pytest.raises(ResponseReviewError):
-        review_response(FakeReviewerClient(None), "q", "a", "x", {}, [])
+        review_response(FakeReviewerClient(None), "q", "a", "x", {}, [], [])

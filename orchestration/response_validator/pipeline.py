@@ -6,13 +6,18 @@ from typing import Any, Callable, Optional
 
 from orchestration.main_agent.agent import AgentRun
 from orchestration.response_validator.fast_validator import FastValidationResult
-from orchestration.response_validator.response_context import collect_customer_interests, collect_recommended_products
+from orchestration.response_validator.response_context import (
+    collect_customer_interests,
+    collect_recommended_products,
+    collect_retrieved_products,
+)
 from orchestration.response_validator.reviewer import ResponseReview
 
 # (question, answer, recommended products, customer interests) -> fast validation; e.g. run_fast_validation with its client bound.
 FastValidate = Callable[[str, str, list[dict[str, Any]], list[str]], FastValidationResult]
-# (question, answer, flagged label, probabilities, customer interests) -> review; e.g. review_response with its client bound.
-ReviewResponse = Callable[[str, str, str, dict[str, float], list[str]], ResponseReview]
+# (question, answer, flagged label, probabilities, customer interests, retrieved products) -> review;
+# e.g. review_response with its client bound.
+ReviewResponse = Callable[[str, str, str, dict[str, float], list[str], list[dict[str, Any]]], ResponseReview]
 
 
 @dataclass
@@ -56,6 +61,7 @@ def validate_response(
             fast_validation.most_likely_label,
             fast_validation.probability_by_label,
             customer_interests,
+            collect_retrieved_products(agent_run.tool_calls),
         )
         response_validation.review = review
         if not review.verdict.is_actually_wrong:
