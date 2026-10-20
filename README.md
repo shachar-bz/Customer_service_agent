@@ -2,7 +2,7 @@
 
 <h1>🛒 Customer Service Agent</h1>
 
-**An AI shopping agent that grounds every answer in the catalog and checks itself before replying.**
+**An AI shopping agent that grounds every answer in the catalog and a reviewer system that validate the answer before replying.**
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/OpenAI-Responses_%2B_Decisions_API-412991?logo=openai&logoColor=white)
@@ -18,7 +18,7 @@
 The agent answers free-text questions from shoppers, such as *"a scale under $100 that shows pounds and kilograms"* or *"will this purchase make me a premier member?"*. The questions are about a Walmart product catalog, and everything goes through one function: `answer_question(question) -> str`.
 
 **How it answers:**
-1. A tool-calling loop on `gpt-6.1-sol` picks the tools it needs.
+1. A ReAct-style tool-calling loop reasons and calls the tools it needs.
 2. It feeds each tool result back to the model until the model can answer.
 3. A fast LLM check scores the answer.
 4. A doubtful answer goes to an LLM reviewer. If the reviewer confirms an error, the agent gets one chance to fix it.
@@ -47,7 +47,7 @@ It is part of a university project on agentic RAG.
 flowchart LR
   Q["Customer question"] --> AG
 
-  subgraph AGENT["Agent · gpt-6.1-sol"]
+  subgraph AGENT["Agent"]
     direction TB
     AG["Agent loop<br/>≤ 8 LLM calls<br/>≤ 12 tool calls"]
     TR["Tool registry<br/>5 tools"]
