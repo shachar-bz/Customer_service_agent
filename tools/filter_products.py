@@ -1,4 +1,4 @@
-"""filter_products tool: returns catalog products that satisfy every hard constraint (price, brand, categories, name, availability)."""
+"""filter_products tool: returns catalog products that satisfy every hard constraint (price, brand, categories, name, sale, availability)."""
 from __future__ import annotations
 
 from typing import Any, Iterable, Optional
@@ -13,7 +13,7 @@ MAX_FILTER_RESULTS = 10
 CATEGORY_LEVEL_SEPARATOR = "|"
 NO_FILTER_MESSAGE = (
     "Provide at least one filter: a price bound, brand, categories, name_contains, "
-    "or available=false."
+    "on_sale, or available=false."
 )
 NO_MATCHES_NOTE = "No products match these constraints."
 TOO_MANY_MATCHES_NOTE = (
@@ -28,7 +28,7 @@ FILTER_PRODUCTS_SCHEMA = {
         f"""Find products that satisfy hard constraints. Every argument is optional, and all
             given constraints are combined with AND (a product must satisfy every one).
             Call this whenever the customer states a hard constraint: a price limit, a brand,
-            a category, a product name, or availability.
+            a category, a product name, being on sale, or availability.
             Prices are compared against the customer price, which already includes the
             premier discount for a premier customer.
             For "X or Y" requests, call this tool once per alternative and merge the results.
@@ -75,6 +75,13 @@ FILTER_PRODUCTS_SCHEMA = {
                     "'Eufy BodySense Smart Scale', 'Smart Scale' does not."
                 ),
             },
+            "on_sale": {
+                "type": "boolean",
+                "description": (
+                    "true: only products currently on sale (sale price below list price). "
+                    "false: only products not on sale. Omit to ignore sale status."
+                ),
+            },
             "available": {
                 "type": "boolean",
                 "description": (
@@ -103,6 +110,7 @@ class FilterProductsArgs(BaseModel):
     brand: Optional[str] = None
     categories: Optional[list[str]] = Field(default=None, min_length=1)
     name_contains: Optional[str] = None
+    on_sale: Optional[bool] = None
     available: bool = True
 
     @field_validator("brand", "name_contains")
@@ -178,6 +186,7 @@ def filter_products(
     brand: Optional[str],
     categories: Optional[list[str]],
     name_contains: Optional[str],
+    on_sale: Optional[bool],
     available: bool,
 ) -> dict[str, Any]:
     """Text arguments arrive already lowercased and trimmed by FilterProductsArgs."""
@@ -189,6 +198,7 @@ def filter_products(
         and (brand is None or normalize_text(product.brand) == brand)
         and (categories is None or set(categories) <= category_levels(product.category))
         and (name_contains is None or normalize_text(product.name).startswith(name_contains))
+        and (on_sale is None or product.is_on_sale == on_sale)
         and price_within_bounds(
             customer_price(product, discount_rate),
             max_price_exclusive,

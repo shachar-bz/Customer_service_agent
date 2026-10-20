@@ -78,6 +78,18 @@ def test_name_contains_matches_name_prefix_only(session):
     assert run_filter({"name_contains": "Smart Scale"})["total_matches"] == 0
 
 
+def test_on_sale_selects_by_sale_status_and_is_ignored_when_omitted(session):
+    products = [
+        make_product("on_sale", list_price=60.0, sale_price=50.0),
+        make_product("full_price", list_price=50.0, sale_price=50.0),
+    ]
+    run_filter = make_runner(products, session)
+
+    assert product_ids(run_filter({"on_sale": True})) == ["on_sale"]
+    assert product_ids(run_filter({"on_sale": False})) == ["full_price"]
+    assert product_ids(run_filter({"brand": "Acme"})) == ["on_sale", "full_price"]
+
+
 def test_available_defaults_to_in_stock_and_false_searches_everything(session):
     products = [make_product("in_stock"), make_product("out_of_stock", available=False)]
     run_filter = make_runner(products, session)
