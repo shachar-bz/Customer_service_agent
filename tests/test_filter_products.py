@@ -10,6 +10,7 @@ from tools.filter_products import (
     MAX_FILTER_RESULTS,
     NO_FILTER_MESSAGE,
     NO_MATCHES_NOTE,
+    UNKNOWN_PRODUCT_IDS_MESSAGE,
     FilterProductsArgs,
     filter_products,
 )
@@ -25,18 +26,19 @@ def make_runner(products, session):
     return lambda raw_args: execute_tool(FilterProductsArgs, bound_filter_products, raw_args)
 
 
-def product_ids(result):
-    return [product["product_id"] for product in result["products"]]
+def returned_uniq_ids(result):
+    # Tool output carries only the short product_id; make_product names each product "Item {uniq_id}".
+    return [product["name"].removeprefix("Item ") for product in result["products"]]
 
 
 def test_price_operators_respect_inclusive_and_exclusive_bounds(session):
     products = [make_product("p99", sale_price=99.0), make_product("p100", sale_price=100.0)]
     run_filter = make_runner(products, session)
 
-    assert product_ids(run_filter({"max_price_exclusive": 100})) == ["p99"]
-    assert product_ids(run_filter({"max_price_inclusive": 100})) == ["p99", "p100"]
-    assert product_ids(run_filter({"min_price_exclusive": 99})) == ["p100"]
-    assert product_ids(run_filter({"min_price_inclusive": 99})) == ["p99", "p100"]
+    assert returned_uniq_ids(run_filter({"max_price_exclusive": 100})) == ["p99"]
+    assert returned_uniq_ids(run_filter({"max_price_inclusive": 100})) == ["p99", "p100"]
+    assert returned_uniq_ids(run_filter({"min_price_exclusive": 99})) == ["p100"]
+    assert returned_uniq_ids(run_filter({"min_price_inclusive": 99})) == ["p99", "p100"]
 
 
 def test_all_filters_combine_with_and(session):
@@ -47,14 +49,14 @@ def test_all_filters_combine_with_and(session):
     ]
     result = make_runner(products, session)({"brand": "lhcer", "max_price_inclusive": 20})
 
-    assert product_ids(result) == ["match"]
+    assert returned_uniq_ids(result) == ["match"]
 
 
 def test_brand_is_case_insensitive_exact_match(session):
     products = [make_product("p1", brand="Under Armour")]
     run_filter = make_runner(products, session)
 
-    assert product_ids(run_filter({"brand": " under armour "})) == ["p1"]
+    assert returned_uniq_ids(run_filter({"brand": " under armour "})) == ["p1"]
     assert run_filter({"brand": "Under"})["total_matches"] == 0
 
 
@@ -65,8 +67,8 @@ def test_categories_match_whole_levels_and_all_must_hold(session):
     ]
     run_filter = make_runner(products, session)
 
-    assert product_ids(run_filter({"categories": ["bathroom scales"]})) == ["bathroom"]
-    assert product_ids(run_filter({"categories": ["Health", "Bathroom Scales"]})) == ["bathroom"]
+    assert returned_uniq_ids(run_filter({"categories": ["bathroom scales"]})) == ["bathroom"]
+    assert returned_uniq_ids(run_filter({"categories": ["Health", "Bathroom Scales"]})) == ["bathroom"]
     assert run_filter({"categories": ["Health", "Food Scales"]})["total_matches"] == 0
     assert run_filter({"categories": ["scale"]})["total_matches"] == 0
 
@@ -74,7 +76,7 @@ def test_categories_match_whole_levels_and_all_must_hold(session):
 def test_name_contains_matches_name_prefix_only(session):
     run_filter = make_runner([make_product("p1", name="Eufy BodySense Smart Scale")], session)
 
-    assert product_ids(run_filter({"name_contains": "eufy bodysense"})) == ["p1"]
+    assert run_filter({"name_contains": "eufy bodysense"})["total_matches"] == 1
     assert run_filter({"name_contains": "Smart Scale"})["total_matches"] == 0
 
 
@@ -85,17 +87,17 @@ def test_on_sale_selects_by_sale_status_and_is_ignored_when_omitted(session):
     ]
     run_filter = make_runner(products, session)
 
-    assert product_ids(run_filter({"on_sale": True})) == ["on_sale"]
-    assert product_ids(run_filter({"on_sale": False})) == ["full_price"]
-    assert product_ids(run_filter({"brand": "Acme"})) == ["on_sale", "full_price"]
+    assert returned_uniq_ids(run_filter({"on_sale": True})) == ["on_sale"]
+    assert returned_uniq_ids(run_filter({"on_sale": False})) == ["full_price"]
+    assert returned_uniq_ids(run_filter({"brand": "Acme"})) == ["on_sale", "full_price"]
 
 
 def test_available_defaults_to_in_stock_and_false_searches_everything(session):
     products = [make_product("in_stock"), make_product("out_of_stock", available=False)]
     run_filter = make_runner(products, session)
 
-    assert product_ids(run_filter({"brand": "Acme"})) == ["in_stock"]
-    assert product_ids(run_filter({"brand": "Acme", "available": False})) == ["in_stock", "out_of_stock"]
+    assert returned_uniq_ids(run_filter({"brand": "Acme"})) == ["in_stock"]
+    assert returned_uniq_ids(run_filter({"brand": "Acme", "available": False})) == ["in_stock", "out_of_stock"]
     assert run_filter({"available": False})["total_matches"] == 2
 
 
@@ -103,9 +105,34 @@ def test_results_are_capped_in_catalog_order_with_total(session):
     products = [make_product(f"p{index}") for index in range(MAX_FILTER_RESULTS + 5)]
     result = make_runner(products, session)({"brand": "Acme"})
 
-    assert product_ids(result) == [f"p{index}" for index in range(MAX_FILTER_RESULTS)]
+    assert returned_uniq_ids(result) == [f"p{index}" for index in range(MAX_FILTER_RESULTS)]
     assert result["total_matches"] == MAX_FILTER_RESULTS + 5
     assert "15 matches" in result["note"]
+
+
+def test_product_ids_scope_the_filter_and_keep_their_order(session):
+    products = [
+        make_product("cheap_a", product_id=1, sale_price=10.0),
+        make_product("cheap_b", product_id=2, sale_price=10.0),
+        make_product("expensive", product_id=3, sale_price=90.0),
+        make_product("cheap_outside_scope", product_id=4, sale_price=10.0),
+    ]
+    run_filter = make_runner(products, session)
+
+    result = run_filter({"product_ids": [3, 2, 1, 2], "max_price_exclusive": 50})
+
+    assert returned_uniq_ids(result) == ["cheap_b", "cheap_a"]
+    assert [product["product_id"] for product in result["products"]] == [2, 1]
+    assert run_filter({"product_ids": [], "max_price_exclusive": 50})["total_matches"] == 0
+
+
+def test_product_ids_alone_or_unknown_return_error(session):
+    run_filter = make_runner([make_product("p1", product_id=1)], session)
+
+    assert NO_FILTER_MESSAGE in run_filter({"product_ids": [1]})["error"]
+    assert run_filter({"product_ids": [1, 9999], "on_sale": False}) == {
+        "error": UNKNOWN_PRODUCT_IDS_MESSAGE.format(unknown_product_ids=[9999])
+    }
 
 
 def test_no_matches_returns_empty_list_with_note(session):

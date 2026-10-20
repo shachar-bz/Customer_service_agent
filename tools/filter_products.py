@@ -1,7 +1,7 @@
-"""filter_products tool: returns catalog products that satisfy every hard constraint (price, brand, categories, name, sale, availability)."""
+"""filter_products tool: returns catalog products that satisfy every hard constraint (price, brand, categories, name, sale, availability), optionally within a given set of product ids."""
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -13,8 +13,9 @@ MAX_FILTER_RESULTS = 10
 CATEGORY_LEVEL_SEPARATOR = "|"
 NO_FILTER_MESSAGE = (
     "Provide at least one filter: a price bound, brand, categories, name_contains, "
-    "on_sale, or available=false."
+    "on_sale, or available=false. product_ids alone is not a filter."
 )
+UNKNOWN_PRODUCT_IDS_MESSAGE = "Invalid arguments: unknown product_ids {unknown_product_ids}."
 NO_MATCHES_NOTE = "No products match these constraints."
 TOO_MANY_MATCHES_NOTE = (
     "Found {total_matches} matches in total; showing the first {shown}. "
@@ -31,6 +32,8 @@ FILTER_PRODUCTS_SCHEMA = {
             a category, a product name, being on sale, or availability.
             Prices are compared against the customer price, which already includes the
             premier discount for a premier customer.
+            To apply constraints to semantic search results, pass their product_ids: only those
+            products are considered, and results keep the order of product_ids.
             For "X or Y" requests, call this tool once per alternative and merge the results.
             Returns at most {MAX_FILTER_RESULTS} products; if more match, a note gives the total."""
     ),
@@ -75,6 +78,15 @@ FILTER_PRODUCTS_SCHEMA = {
                     "'Eufy BodySense Smart Scale', 'Smart Scale' does not."
                 ),
             },
+            "product_ids": {
+                "type": "array",
+                "items": {"type": "integer"},
+                "description": (
+                    "Limit the filter to these products, e.g. the product_ids returned by "
+                    "search_products. Products outside this list are never returned. Must be "
+                    "combined with at least one other constraint."
+                ),
+            },
             "on_sale": {
                 "type": "boolean",
                 "description": (
@@ -110,6 +122,7 @@ class FilterProductsArgs(BaseModel):
     brand: Optional[str] = None
     categories: Optional[list[str]] = Field(default=None, min_length=1)
     name_contains: Optional[str] = None
+    product_ids: Optional[list[int]] = None
     on_sale: Optional[bool] = None
     available: bool = True
 
@@ -133,6 +146,11 @@ class FilterProductsArgs(BaseModel):
             raise ValueError("category names must not be blank")
         return normalized_categories
 
+    @field_validator("product_ids")
+    @classmethod
+    def drop_duplicate_product_ids(cls, product_ids: Optional[list[int]]) -> Optional[list[int]]:
+        return None if product_ids is None else list(dict.fromkeys(product_ids))
+
     @model_validator(mode="after")
     def check_price_bounds(self) -> FilterProductsArgs:
         if self.max_price_exclusive is not None and self.max_price_inclusive is not None:
@@ -149,7 +167,8 @@ class FilterProductsArgs(BaseModel):
     @model_validator(mode="after")
     def require_at_least_one_filter(self) -> FilterProductsArgs:
         # Only available=true (the default) and no constraints: nothing to filter on.
-        if not self.model_dump(exclude_defaults=True):
+        # product_ids only scopes the other constraints, so it does not count.
+        if not self.model_dump(exclude_defaults=True, exclude={"product_ids"}):
             raise ValueError(NO_FILTER_MESSAGE)
         return self
 
@@ -177,7 +196,7 @@ def price_within_bounds(
 
 
 def filter_products(
-    products: Iterable[Product],
+    products: list[Product],
     session: ConversationSession,
     max_price_exclusive: Optional[float],
     max_price_inclusive: Optional[float],
@@ -186,14 +205,25 @@ def filter_products(
     brand: Optional[str],
     categories: Optional[list[str]],
     name_contains: Optional[str],
+    product_ids: Optional[list[int]],
     on_sale: Optional[bool],
     available: bool,
 ) -> dict[str, Any]:
-    """Text arguments arrive already lowercased and trimmed by FilterProductsArgs."""
+    """Text arguments arrive already lowercased and trimmed by FilterProductsArgs.
+    With product_ids, only those products are considered, in product_ids order."""
+    if product_ids is None:
+        scoped_products = products
+    else:
+        products_by_product_id = {product.product_id: product for product in products}
+        unknown_product_ids = [product_id for product_id in product_ids if product_id not in products_by_product_id]
+        if unknown_product_ids:
+            return {"error": UNKNOWN_PRODUCT_IDS_MESSAGE.format(unknown_product_ids=unknown_product_ids)}
+        scoped_products = [products_by_product_id[product_id] for product_id in product_ids]
+
     discount_rate = session.discount_rate
     matching_products = [
         product
-        for product in products
+        for product in scoped_products
         if (not available or product.available)
         and (brand is None or normalize_text(product.brand) == brand)
         and (categories is None or set(categories) <= category_levels(product.category))

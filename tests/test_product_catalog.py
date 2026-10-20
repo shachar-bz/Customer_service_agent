@@ -20,6 +20,10 @@ def test_loads_every_product_in_the_real_catalog(catalog):
     assert len(index_products_by_id(catalog)) == 787
 
 
+def test_product_ids_are_one_to_n_in_csv_order(catalog):
+    assert [product.product_id for product in catalog] == list(range(1, 788))
+
+
 def test_descriptions_have_no_disclaimer(catalog):
     assert not any(DISCLAIMER_MARKER in product.description for product in catalog)
 

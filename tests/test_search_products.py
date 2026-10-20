@@ -92,7 +92,8 @@ def build_search_tool(decisions_client: FakeDecisionsClient, session=None, uniq_
 
 
 def returned_ids(result: dict) -> list[str]:
-    return [product["product_id"] for product in result["products"]]
+    # Tool output carries only the short product_id; make_product names each product "Item {uniq_id}".
+    return [product["name"].removeprefix("Item ") for product in result["products"]]
 
 
 def test_makes_one_predicate_call_per_candidate_and_returns_top_ten_by_probability():
@@ -151,6 +152,22 @@ def test_falls_back_to_vector_order_when_rerank_fails(decisions_client, caplog):
     assert returned_ids(result) == CANDIDATE_IDS[:SEARCH_RESULT_COUNT]
     assert "note" not in result
     assert "Rerank failed" in caplog.text and "query='scale'" in caplog.text
+
+
+def test_out_of_stock_candidates_are_dropped_before_rerank():
+    decisions_client = FakeDecisionsClient(probability_by_id={"in_stock": 0.9, "out_of_stock": 1.0})
+    products_by_id = {
+        "out_of_stock": make_product("out_of_stock", available=False),
+        "in_stock": make_product("in_stock"),
+    }
+    tool = partial(
+        search_products, FakeProductIndex(list(products_by_id)), products_by_id, decisions_client, ConversationSession()
+    )
+
+    result = tool(query="scale")
+
+    assert returned_ids(result) == ["in_stock"]
+    assert len(decisions_client.create_calls) == 1
 
 
 def test_premier_customer_sees_discounted_customer_price():

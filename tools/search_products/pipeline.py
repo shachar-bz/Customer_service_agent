@@ -22,9 +22,10 @@ def search_catalog(
     decisions_client: OpenAI,
     query: str,
 ) -> list[Product]:
-    """Falls back to vector order when the rerank call fails, so the agent still gets results."""
+    """Returns in-stock products only; out-of-stock candidates are dropped before rerank.
+    Falls back to vector order when the rerank call fails, so the agent still gets results."""
     matches = product_index.search(query, top_k=RETRIEVAL_CANDIDATE_COUNT)
-    candidates = [products_by_id[match.uniq_id] for match in matches]
+    candidates = [products_by_id[match.uniq_id] for match in matches if products_by_id[match.uniq_id].available]
 
     try:
         reranked_products = rerank_products(decisions_client, query, candidates)

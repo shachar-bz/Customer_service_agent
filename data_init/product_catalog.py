@@ -25,6 +25,8 @@ REQUIRED_COLUMNS = {
 
 
 class Product(BaseModel):
+    # Short id (1..N in CSV row order) the agent sees and passes back; uniq_id stays internal.
+    product_id: int
     uniq_id: str
     name: str
     description: str
@@ -50,8 +52,9 @@ def parse_available(value: str) -> bool:
     return normalized_value == "true"
 
 
-def product_from_csv_row(row: dict[str, str]) -> Product:
+def product_from_csv_row(row: dict[str, str], product_id: int) -> Product:
     return Product(
+        product_id=product_id,
         uniq_id=row["Uniq Id"].strip(),
         name=row["Product Name"].strip(),
         description=strip_disclaimer(row["Description"]),
@@ -71,9 +74,10 @@ def load_product_catalog(csv_path: Path = PRODUCT_CSV_PATH) -> list[Product]:
             raise ValueError(f"{csv_path} is missing columns: {sorted(missing_columns)}")
 
         products: list[Product] = []
-        for line_number, row in enumerate(reader, start=2):
+        for product_id, row in enumerate(reader, start=1):
+            line_number = product_id + 1
             try:
-                products.append(product_from_csv_row(row))
+                products.append(product_from_csv_row(row, product_id))
             except ValueError as error:
                 raise ValueError(f"{csv_path}, line {line_number}: {error}") from error
 

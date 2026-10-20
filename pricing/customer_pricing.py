@@ -13,7 +13,7 @@ MAX_DESCRIPTION_CHARS = 600
 
 
 class PricedProduct(BaseModel):
-    product_id: str
+    product_id: int
     name: str
     description: str
     brand: str
@@ -33,7 +33,7 @@ def customer_price(product: Product, discount_rate: float) -> float:
 
 def priced_product_view(product: Product, discount_rate: float) -> PricedProduct:
     return PricedProduct(
-        product_id=product.uniq_id,
+        product_id=product.product_id,
         name=product.name,
         description=product.description[:MAX_DESCRIPTION_CHARS],
         brand=product.brand,

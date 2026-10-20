@@ -7,6 +7,7 @@ DEFAULT_CATEGORY = "Health | Home Health Care | Bathroom Scales | Mechanical Sca
 
 def make_product(
     uniq_id: str = "p1",
+    product_id: int = 1,
     name: str | None = None,
     sale_price: float = 50.0,
     list_price: float | None = None,
@@ -16,6 +17,7 @@ def make_product(
     description: str = "",
 ) -> Product:
     return Product(
+        product_id=product_id,
         uniq_id=uniq_id,
         name=name if name is not None else f"Item {uniq_id}",
         description=description,

@@ -24,7 +24,7 @@ def test_premier_price_rounds_half_up_not_down_on_float_artifacts():
 def test_priced_view_exposes_both_prices():
     view = priced_product_view(make_product(list_price=120.0, sale_price=104.0), PREMIER_DISCOUNT_RATE)
 
-    assert view.product_id == "p1"
+    assert view.product_id == 1
     assert view.list_price == 120.0
     assert view.sale_price == 104.0
     assert view.on_sale
