@@ -83,13 +83,19 @@ flowchart LR
 
 ### Design decisions
 
-- **Pricing lives in code.**
-  - Tool arguments are pydantic models that reject unknown fields, so an injected `status="premier"` is refused.
-  - Each question gets a new session, so one customer's discount never leaks into the next question.
-- **Stateless, resumable runs.**
-  - Nothing is stored on OpenAI's side (`store=False`).
-  - The client keeps the full transcript, including the encrypted reasoning, so the repair pass can resume the exact run.
-- **Testable by design.** Every OpenAI client is passed in as an argument, so the tests use fake clients and never call the API.
+- **Lazy loading.**
+  - `import hw4` loads nothing heavy, because the runtime is imported inside `answer_question`.
+  - The catalog, the vector index and the OpenAI clients are built on the first question.
+  - A test imports `hw4` in a clean subprocess and checks that chromadb, openai and the tools did not load.
+- **Built once, kept in memory.**
+  - The runtime is cached with `functools.cache`. Later questions reuse the catalog, the in-memory customer store and the clients, so only the first question pays the startup cost.
+  - A failed build is not cached, so the next question tries again.
+  - The vector index is saved to disk under a hash of its content. A restart skips re-embedding, and a changed catalog gets a fresh index.
+  - The only thing created per question is the session.
+- **Decisions API: probabilities instead of free text.**
+  - **Rerank:** each product gets a *predicate* question ("does it meet the need?"). Products are sorted by the probability that comes back.
+  - **Fast check:** one *choice* question with 4 labels (ok, unsuitable products, too many products, question not answered). The answer passes when P(ok) ≥ 0.5.
+  - **Why:** the code gets numbers instead of text to parse, so the thresholds are easy to tune. The most likely problem label is handed to the reviewer as a hint.
 
 ---
 
@@ -112,9 +118,6 @@ flowchart LR
 - **Embedding text built for a small model.**
   - The Walmart disclaimer is removed first; it appears in 783 of 787 descriptions.
   - The text is ordered name → category → description, because MiniLM cuts off long input.
-- **Self-managing index.**
-  - The index is keyed by a hash of the embedded text, so it rebuilds only when that text changes.
-  - An interrupted build finishes on the next start.
 
 ---
 
