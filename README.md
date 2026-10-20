@@ -2,7 +2,7 @@
 
 <h1>🛒 Customer Service Agent</h1>
 
-**An AI shopping agent that grounds every answer in the catalog and checks itself before replying.** It answers customer questions about a Walmart product catalog, finds the right products, and quotes the price *this* customer pays.
+**An AI shopping agent that grounds every answer in the catalog and checks itself before replying.**
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/OpenAI-Responses_%2B_Decisions_API-412991?logo=openai&logoColor=white)
@@ -16,23 +16,29 @@
 
 ## Overview
 
-Customers ask things like *"a scale under $100 that shows pounds and kilograms"* or *"will this purchase make me a premier member?"*. An LLM on its own will guess prices, invent products and get the math wrong.
+The agent answers free-text questions from shoppers, such as *"a scale under $100 that shows pounds and kilograms"* or *"will this purchase make me a premier member?"*. The questions are about a Walmart product catalog, and everything goes through one function: `answer_question(question) -> str`.
 
-Facts come from tools. Prices are computed in code, and other arithmetic goes through a calculator tool. A second model reviews the answer before the customer sees it. This is part of a university project on agentic RAG.
+**How it answers:**
+1. A tool-calling loop on `gpt-6.1-sol` picks from five tools: product search, product filters, customer lookup, sign-in and a calculator.
+2. It feeds each tool result back to the model until the model can answer.
+3. A fast LLM check scores the answer.
+4. A doubtful answer goes to an LLM reviewer. If the reviewer confirms an error, the agent gets one chance to fix it.
 
-- **Prices the model can't fake.**
-  - Only a verified sign-in as a premier customer turns on the 5% discount, and that happens in code.
-  - The model can't grant the discount itself, even if a customer asks it to.
-  - Every product the agent sees already carries its final `customer_price`.
-- **Hybrid retrieval.** Semantic search with an LLM reranker handles fuzzy needs. A deterministic filter handles hard constraints: price, brand, sale and stock.
-- **Bounded agent loop.**
-  - The agent model gets at most 8 calls and 12 tool calls per question.
-  - The last call is reserved, so a question always ends with an answer.
-- **Self-checking answers.**
-  - One fast LLM call scores each answer.
-  - A reviewer LLM looks only at answers that score low.
-  - A confirmed error gets one repair pass.
-- **Errors are data, not crashes.** Tools never raise. Bad arguments come back to the model as `{"error": ...}`, so it can correct itself.
+It is part of a university project on agentic RAG.
+
+**Key design points:**
+
+- **Grounded.**
+  - Product facts come only from the catalog.
+  - Prices are computed in code, not by the model.
+- **Tamper-proof pricing.** Only a verified premier sign-in turns on the 5% discount. The model can't grant the discount itself.
+- **Hybrid retrieval.** Vector search plus an LLM rerank handle meaning. Exact filters handle price, brand and stock.
+- **Bounded.**
+  - Each question gets at most 8 agent calls and 12 tool calls.
+  - The last agent call is kept for the answer, so a question always ends with a reply.
+- **Never crashes.**
+  - Tools return errors as data, so the model can fix its own arguments.
+  - `answer_question` never raises.
 
 | Layer | Stack |
 |---|---|
@@ -41,7 +47,6 @@ Facts come from tools. Prices are computed in code, and other arithmetic goes th
 | **Reviewer** | OpenAI Responses API · `gpt-6-luna` · structured output (pydantic) |
 | **Retrieval** | ChromaDB (cosine HNSW) · `all-MiniLM-L6-v2` embeddings, run locally |
 | **Data** | Pydantic v2 · mongomock (pymongo API) · Walmart product dataset from Kaggle |
-| **Quality** | pytest with hand-written fake OpenAI clients · per-question traces in `agent.log` |
 
 ---
 
@@ -64,8 +69,6 @@ flowchart LR
   VAL --> A["Answer"]
 ```
 
-**Life of a question:** fresh session → agent calls tools (often several in one turn) → draft answer → fast check / review / ≤ 1 repair → full trace in `agent.log`.
-
 ---
 
 ## Agent & tools
@@ -80,11 +83,9 @@ flowchart LR
 
 ### Design decisions
 
-- **Pricing lives in code, not in the prompt.**
-  - Only a successful `authenticate` call can turn on the discount.
+- **Pricing lives in code.**
   - Tool arguments are pydantic models that reject unknown fields, so an injected `status="premier"` is refused.
-  - A new session per question means one customer's discount can never leak into the next question.
-- **Budget edge cases.** When the budget runs out, the agent must answer with what it has (`tool_choice="none"`). Calls past the limit inside a batch still get an error result, so the transcript stays valid.
+  - Each question gets a new session, so one customer's discount never leaks into the next question.
 - **Stateless, resumable runs.**
   - Nothing is stored on OpenAI's side (`store=False`).
   - The client keeps the full transcript, including the encrypted reasoning, so the repair pass can resume the exact run.
@@ -103,18 +104,16 @@ flowchart LR
   T -. "optional: agent narrows<br/>these ids" .-> F["filter_products<br/>price · brand · sale · stock"]
 ```
 
-### Design decisions
-
 - **Retrieve cheaply, judge precisely.**
   - A local embedding model finds 15 candidates at no API cost.
-  - Each candidate is scored by the probability that it meets the customer's need. All 15 calls run in parallel, so a search takes about as long as one call.
-  - Candidates are re-sorted by that score, and ties keep their vector-search order.
-- **Meaning and exact rules stay apart.** Embeddings handle price and brand poorly, so those go to `filter_products`. It takes the search results' ids and keeps their relevance order.
+  - Each candidate is scored by the probability that it meets the need.
+  - All 15 scoring calls run in parallel, so a search takes about as long as one call.
+- **Meaning and exact rules stay apart.** Embeddings handle price and brand poorly, so `filter_products` handles them. It takes the ids from the search results and keeps their relevance order.
 - **Embedding text built for a small model.**
-  - Product text is laid out as name → category → description, because MiniLM cuts off long input.
-  - The Walmart disclaimer is stripped first; it appears in 783 of 787 descriptions.
+  - The Walmart disclaimer is removed first; it appears in 783 of 787 descriptions.
+  - The text is ordered name → category → description, because MiniLM cuts off long input.
 - **Self-managing index.**
-  - The vector collection is named after a hash of the embedded text and the product ids. Changing that text rebuilds the index; otherwise the index is reused from disk.
+  - The index is keyed by a hash of the embedded text, so it rebuilds only when that text changes.
   - An interrupted build finishes on the next start.
 
 ---
@@ -131,21 +130,45 @@ flowchart LR
   RP --> OUT
 ```
 
-### Design decisions
-
 - **Fast gate, careful judge.**
-  - An answer that passes costs one extra fast call. Only doubtful answers reach the reviewer.
+  - An answer that passes costs one extra fast call.
   - The reviewer sees *every* product that was retrieved, so it can catch a better match the agent skipped.
-- **The agent fixes the answer; the reviewer only diagnoses.** The repair resumes the agent's own transcript with its tools, session and remaining budget, instead of having another model rewrite the text.
-- **Fails open.** Any error during validation keeps the original answer, so the customer always gets a reply.
-- **Capped runs skip validation.** A run that hit the budget is sent as is, because no budget is left to repair it.
+- **The agent fixes the answer; the reviewer only diagnoses.** The repair continues the agent's own run, with its tools, session and remaining budget.
+- **Fails open.** If validation hits an error, the original answer is kept. Runs that hit the budget skip validation, because no budget is left to repair them.
+
+---
+
+## Project structure
+
+```
+hw4.py                        # entry point: answer_question(question) -> str
+run_example_queries.py        # runs sample questions from example_queries.txt
+orchestration/
+  entrypoint.py               # answer_question: never raises, logs every run
+  runtime.py                  # builds data + OpenAI clients once, runs agent → validation
+  logger.py                   # per-question trace in agent.log
+  main_agent/
+    agent.py                  # tool-calling loop with call budgets
+    prompt.py                 # system prompt
+    tool_registry.py          # binds tools to data, validates arguments, never raises
+  response_validator/
+    fast_validator.py         # fast LLM check that scores the answer
+    reviewer.py               # LLM reviewer for doubtful answers
+    pipeline.py               # fast check → review → one repair, fails open
+tools/                        # authenticate, get_customer, calculator, filter_products
+  search_products/            # vector retrieval + LLM rerank
+pricing/                      # per-question session and customer_price
+data_init/                    # catalog loading, Chroma index, customer store
+assignment_prep/              # dataset download and checks
+tests/                        # pytest suite with fake OpenAI clients
+```
 
 ---
 
 <details>
 <summary><b>Getting started</b></summary>
 
-**Requirements:** Python 3.10+ and an OpenAI API key. Set it as both `OPENAI_API_KEY_AGENT` and `OPENAI_API_KEY_DECISIONS`; they can be different keys if you want separate billing.
+**Requirements:** Python 3.10+ and an OpenAI API key. Set it as both `OPENAI_API_KEY_AGENT` and `OPENAI_API_KEY_DECISIONS`; you can use two different keys if you want separate billing.
 
 ```sh
 python -m venv .venv && source .venv/bin/activate
@@ -164,21 +187,8 @@ python run_example_queries.py q3 q10           # run sample queries from example
 pytest
 ```
 
-- **First run.** The first run downloads the MiniLM embedding model and embeds the catalog into `chroma_data/`, so it takes a moment. Later runs reuse the index.
-- **Traces.** Each question's full trace is written to `agent.log`.
-- **Tests.** The tests never call OpenAI. Some of them need `product_data.csv` and the embedding model.
-
-**Repository map**
-
-```
-hw4.py                  entry point: answer_question(question) -> str
-orchestration/          runtime, agent loop, system prompt, tool registry, response validation, logging
-tools/                  authenticate, get_customer, calculator, filter_products, search_products/
-pricing/                per-question session and customer pricing
-data_init/              product catalog, Chroma index, customer store
-assignment_prep/        dataset download and checks
-tests/                  pytest suite with fake OpenAI clients
-```
+- **First run.** It downloads the MiniLM model and builds the index into `chroma_data/`. Later runs reuse the index.
+- **Tests.** The tests never call OpenAI, but some of them need `product_data.csv` and the embedding model.
 
 </details>
 
