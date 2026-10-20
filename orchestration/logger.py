@@ -3,19 +3,26 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 
 from orchestration.question_outcome import QuestionOutcome
 
-AGENT_LOG_PATH = Path(__file__).resolve().parent.parent / "agent.log"
+DEFAULT_AGENT_LOG_PATH = Path(__file__).resolve().parent.parent / "agent.log"
+# Overrides the log location (tests point it at a temp file so they never write the real agent.log).
+AGENT_LOG_PATH_ENV_VAR = "AGENT_LOG_PATH"
 
 agent_logger = logging.getLogger("customer_service_agent")
+
+
+def agent_log_path() -> Path:
+    return Path(os.environ.get(AGENT_LOG_PATH_ENV_VAR, DEFAULT_AGENT_LOG_PATH))
 
 
 def ensure_agent_log_handler() -> None:
     if agent_logger.handlers:
         return
-    file_handler = logging.FileHandler(AGENT_LOG_PATH, encoding="utf-8", delay=True)  # delay: an unwritable log never raises
+    file_handler = logging.FileHandler(agent_log_path(), encoding="utf-8", delay=True)  # delay: an unwritable log never raises
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s\n%(message)s\n"))
     agent_logger.addHandler(file_handler)
     agent_logger.setLevel(logging.INFO)
