@@ -78,11 +78,10 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  Q["Query<br/>customer's own words"] --> V["Vector search<br/>Chroma · MiniLM · top 15"]
-  V --> R["LLM rerank<br/>15 parallel relevance scores"]
-  R --> T["Top 10<br/>with customer_price"]
-  R -. "rerank fails:<br/>keep vector order" .-> T
-  T -. "optional: agent narrows<br/>these ids" .-> F["filter_products<br/>price · brand · sale · stock"]
+  A["Agent"] -- "customer's need" --> S["Semantic search - top 10"]
+  A -- "exact rules" --> F["Hard-constraint filter"]
+  S --> P["Products<br/>with customer_price"]
+  F --> P
 ```
 
 Search is split in two: semantic search for the customer's need, and an exact filter for hard rules. The agent often chains them.
@@ -95,12 +94,10 @@ Search is split in two: semantic search for the customer's need, and an exact fi
 - **Retrieve 15 → rerank → keep 10.**
   - Vector search pulls 15 candidates.
   - The Decisions API scores all 15 in parallel, and the 10 best are returned.
-  - If reranking fails, the vector order is kept.
 
 ### Hard-constraint filter: exact rules
 - **Exact matching.** `filter_products` matches price, brand, name, sale and stock exactly. Embeddings blur these.
 - **The customer's price.** Price limits are checked against what this customer pays, with any premier discount applied.
-- **Order kept.** Given the ids from a search, it narrows them and keeps their relevance order.
 
 ---
 
