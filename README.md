@@ -35,10 +35,9 @@ It is part of a university project on agentic RAG.
   - The runtime is cached with `functools.cache`, so only the first question pays the startup cost.
   - A failed build is not cached, so the next question tries again.
   - The vector index is saved to disk under a hash of its content, so a restart skips re-embedding.
-- **Decisions API: probabilities, not free text.**
-  - The reranker asks one yes/no question per product and sorts products by the probability that comes back.
-  - The fast check picks one of 4 labels, and the answer passes when P(ok) ≥ 0.5.
-  - Thresholds are easy to tune, and the most likely problem label goes to the reviewer as a hint.
+- **Decisions API for quick judgments.** OpenAI's Decisions API is fast and cheap. It returns a probability instead of text to parse, so it handles the small yes/no and multiple-choice calls:
+  - **Reranking:** each search candidate gets one yes/no question, *"does this product meet the need?"*, and products are sorted by the answer's probability.
+  - **Answer review:** one multiple-choice call marks the draft answer as ok or names the problem. Only doubtful answers go on to the full LLM reviewer.
 
 ---
 
@@ -86,14 +85,22 @@ flowchart LR
   T -. "optional: agent narrows<br/>these ids" .-> F["filter_products<br/>price · brand · sale · stock"]
 ```
 
-- **Retrieve cheaply, judge precisely.**
-  - A local embedding model finds 15 candidates at no API cost.
-  - Each candidate is scored by the probability that it meets the need.
-  - All 15 scoring calls run in parallel, so a search takes about as long as one call.
-- **Meaning and exact rules stay apart.** Embeddings handle price and brand poorly, so `filter_products` handles them. It takes the ids from the search results and keeps their relevance order.
-- **Embedding text built for a small model.**
-  - The Walmart disclaimer is removed first; it appears in 783 of 787 descriptions.
-  - The text is ordered name → category → description, because MiniLM cuts off long input.
+Search is split in two: semantic search for the customer's need, and an exact filter for hard rules. The agent often chains them.
+
+### Semantic search: what the customer needs
+- **Embeddings.**
+  - Each product is embedded once with `all-MiniLM-L6-v2`, a small sentence-similarity model that runs locally with no API cost.
+  - The embedded text is name → category → description, with the Walmart disclaimer stripped, because the model cuts off long input.
+  - Brand is left out of the text, since the filter handles it exactly.
+- **Retrieve 15 → rerank → keep 10.**
+  - Vector search pulls 15 candidates.
+  - The Decisions API scores all 15 in parallel, and the 10 best are returned.
+  - If reranking fails, the vector order is kept.
+
+### Hard-constraint filter: exact rules
+- **Exact matching.** `filter_products` matches price, brand, name, sale and stock exactly. Embeddings blur these.
+- **The customer's price.** Price limits are checked against what this customer pays, with any premier discount applied.
+- **Order kept.** Given the ids from a search, it narrows them and keeps their relevance order.
 
 ---
 
