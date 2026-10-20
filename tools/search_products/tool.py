@@ -19,9 +19,10 @@ SEARCH_PRODUCTS_SCHEMA = {
     "description": (
         f"""Semantic search over the product catalog. Use it for natural-language needs
             ("something to keep my coffee hot on the go") and "something like X" requests.
-            Returns up to {SEARCH_RESULT_COUNT} of the most relevant in-stock products, most
-            relevant first. It does not enforce hard constraints (price, brand, category, sale):
-            to apply them, pass the returned product_ids to filter_products with the constraints.
+            Returns the {SEARCH_RESULT_COUNT} most relevant products, in stock or not, most
+            relevant first; check the available field before recommending. It does not enforce
+            hard constraints (price, brand, category, sale): to apply them, pass the returned
+            product_ids to filter_products with the constraints.
             Prices include the premier discount for a premier customer."""
     ),
     "parameters": {

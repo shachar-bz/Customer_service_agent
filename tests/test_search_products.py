@@ -154,22 +154,6 @@ def test_falls_back_to_vector_order_when_rerank_fails(decisions_client, caplog):
     assert "Rerank failed" in caplog.text and "query='scale'" in caplog.text
 
 
-def test_out_of_stock_candidates_are_dropped_before_rerank():
-    decisions_client = FakeDecisionsClient(probability_by_id={"in_stock": 0.9, "out_of_stock": 1.0})
-    products_by_id = {
-        "out_of_stock": make_product("out_of_stock", available=False),
-        "in_stock": make_product("in_stock"),
-    }
-    tool = partial(
-        search_products, FakeProductIndex(list(products_by_id)), products_by_id, decisions_client, ConversationSession()
-    )
-
-    result = tool(query="scale")
-
-    assert returned_ids(result) == ["in_stock"]
-    assert len(decisions_client.create_calls) == 1
-
-
 def test_premier_customer_sees_discounted_customer_price():
     decisions_client = FakeDecisionsClient(probability_by_id={"product_0": 1.0})
     tool, _ = build_search_tool(decisions_client, session=ConversationSession(is_premier=True))
