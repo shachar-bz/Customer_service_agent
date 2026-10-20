@@ -32,7 +32,8 @@ SEARCH_PRODUCTS_SCHEMA = {
                 "type": "string",
                 "description": (
                     "The need in natural language, e.g. 'bathroom scale that shows lbs and kg' "
-                    "or 'something like the Eufy BodySense Smart Scale'."
+                    "or 'something like the Eufy BodySense Smart Scale'. Use only the customer's "
+                    "own words for the need; don't add needs, methods, or product types they did not mention."
                 ),
             },
         },
