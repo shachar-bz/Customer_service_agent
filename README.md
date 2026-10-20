@@ -8,7 +8,6 @@
 ![OpenAI](https://img.shields.io/badge/OpenAI-Responses_%2B_Decisions_API-412991?logo=openai&logoColor=white)
 ![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-vector_search-FF6F00)
-![pytest](https://img.shields.io/badge/pytest-144_tests-0A9EDC?logo=pytest&logoColor=white)
 
 </div>
 
@@ -19,7 +18,7 @@
 The agent answers free-text questions from shoppers, such as *"a scale under $100 that shows pounds and kilograms"* or *"will this purchase make me a premier member?"*. The questions are about a Walmart product catalog, and everything goes through one function: `answer_question(question) -> str`.
 
 **How it answers:**
-1. A tool-calling loop on `gpt-6.1-sol` picks from five tools: product search, product filters, customer lookup, sign-in and a calculator.
+1. A tool-calling loop on `gpt-6.1-sol` picks the tools it needs.
 2. It feeds each tool result back to the model until the model can answer.
 3. A fast LLM check scores the answer.
 4. A doubtful answer goes to an LLM reviewer. If the reviewer confirms an error, the agent gets one chance to fix it.
@@ -28,25 +27,18 @@ It is part of a university project on agentic RAG.
 
 **Key design points:**
 
-- **Grounded.**
-  - Product facts come only from the catalog.
-  - Prices are computed in code, not by the model.
-- **Tamper-proof pricing.** Only a verified premier sign-in turns on the 5% discount. The model can't grant the discount itself.
-- **Hybrid retrieval.** Vector search plus an LLM rerank handle meaning. Exact filters handle price, brand and stock.
-- **Bounded.**
-  - Each question gets at most 8 agent calls and 12 tool calls.
-  - The last agent call is kept for the answer, so a question always ends with a reply.
-- **Never crashes.**
-  - Tools return errors as data, so the model can fix its own arguments.
-  - `answer_question` never raises.
-
-| Layer | Stack |
-|---|---|
-| **Agent** | OpenAI Responses API · `gpt-6.1-sol` · function calling |
-| **Rerank & fast check** | OpenAI Decisions API · `gpt-6-luna` · a probability for each answer |
-| **Reviewer** | OpenAI Responses API · `gpt-6-luna` · structured output (pydantic) |
-| **Retrieval** | ChromaDB (cosine HNSW) · `all-MiniLM-L6-v2` embeddings, run locally |
-| **Data** | Pydantic v2 · mongomock (pymongo API) · Walmart product dataset from Kaggle |
+- **Lazy loading.**
+  - `import hw4` loads nothing heavy.
+  - The catalog, the vector index and the OpenAI clients are built on the first question.
+  - A test checks this in a clean subprocess.
+- **Built once, kept in memory.**
+  - The runtime is cached with `functools.cache`, so only the first question pays the startup cost.
+  - A failed build is not cached, so the next question tries again.
+  - The vector index is saved to disk under a hash of its content, so a restart skips re-embedding.
+- **Decisions API: probabilities, not free text.**
+  - The reranker asks one yes/no question per product and sorts products by the probability that comes back.
+  - The fast check picks one of 4 labels, and the answer passes when P(ok) ≥ 0.5.
+  - Thresholds are easy to tune, and the most likely problem label goes to the reviewer as a hint.
 
 ---
 
@@ -80,22 +72,6 @@ flowchart LR
 | `search_products` | Semantic product search: retrieve, rerank, return the top 10 |
 | `filter_products` | Exact constraints combined with AND: price range, brand, name, on sale, in stock, or a list of ids |
 | `calculator` | Safe arithmetic, parsed from the syntax tree with no `eval`. Rounds half-up with `Decimal` |
-
-### Design decisions
-
-- **Lazy loading.**
-  - `import hw4` loads nothing heavy, because the runtime is imported inside `answer_question`.
-  - The catalog, the vector index and the OpenAI clients are built on the first question.
-  - A test imports `hw4` in a clean subprocess and checks that chromadb, openai and the tools did not load.
-- **Built once, kept in memory.**
-  - The runtime is cached with `functools.cache`. Later questions reuse the catalog, the in-memory customer store and the clients, so only the first question pays the startup cost.
-  - A failed build is not cached, so the next question tries again.
-  - The vector index is saved to disk under a hash of its content. A restart skips re-embedding, and a changed catalog gets a fresh index.
-  - The only thing created per question is the session.
-- **Decisions API: probabilities instead of free text.**
-  - **Rerank:** each product gets a *predicate* question ("does it meet the need?"). Products are sorted by the probability that comes back.
-  - **Fast check:** one *choice* question with 4 labels (ok, unsuitable products, too many products, question not answered). The answer passes when P(ok) ≥ 0.5.
-  - **Why:** the code gets numbers instead of text to parse, so the thresholds are easy to tune. The most likely problem label is handed to the reviewer as a hint.
 
 ---
 
