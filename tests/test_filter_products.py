@@ -60,19 +60,6 @@ def test_brand_is_case_insensitive_exact_match(session):
     assert run_filter({"brand": "Under"})["total_matches"] == 0
 
 
-def test_categories_match_whole_levels_and_all_must_hold(session):
-    products = [
-        make_product("bathroom", category="Health | Home Health Care | Bathroom Scales | All Bathroom Scales"),
-        make_product("food", category="Home | Kitchen & Dining | Tools & Gadgets | Food Scales"),
-    ]
-    run_filter = make_runner(products, session)
-
-    assert returned_uniq_ids(run_filter({"categories": ["bathroom scales"]})) == ["bathroom"]
-    assert returned_uniq_ids(run_filter({"categories": ["Health", "Bathroom Scales"]})) == ["bathroom"]
-    assert run_filter({"categories": ["Health", "Food Scales"]})["total_matches"] == 0
-    assert run_filter({"categories": ["scale"]})["total_matches"] == 0
-
-
 def test_name_contains_matches_name_prefix_only(session):
     run_filter = make_runner([make_product("p1", name="Eufy BodySense Smart Scale")], session)
 
@@ -156,8 +143,7 @@ def test_no_filter_returns_error(session):
         {"min_price_inclusive": 100, "max_price_exclusive": 50},
         {"max_price_inclusive": -1},
         {"brand": "  "},
-        {"categories": []},
-        {"categories": ["Health", " "]},
+        {"categories": ["Health"]},
         {"color": "red"},
     ],
 )

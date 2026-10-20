@@ -1,4 +1,4 @@
-"""filter_products tool: returns catalog products that satisfy every hard constraint (price, brand, categories, name, sale, availability), optionally within a given set of product ids."""
+"""filter_products tool: returns catalog products that satisfy every hard constraint (price, brand, name, sale, availability), optionally within a given set of product ids."""
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -10,9 +10,8 @@ from pricing.conversation_session import ConversationSession
 from pricing.customer_pricing import customer_price, priced_product_view
 
 MAX_FILTER_RESULTS = 10
-CATEGORY_LEVEL_SEPARATOR = "|"
 NO_FILTER_MESSAGE = (
-    "Provide at least one filter: a price bound, brand, categories, name_contains, "
+    "Provide at least one filter: a price bound, brand, name_contains, "
     "on_sale, or available=false. product_ids alone is not a filter."
 )
 UNKNOWN_PRODUCT_IDS_MESSAGE = "Invalid arguments: unknown product_ids {unknown_product_ids}."
@@ -29,7 +28,7 @@ FILTER_PRODUCTS_SCHEMA = {
         f"""Find products that satisfy hard constraints. Every argument is optional, and all
             given constraints are combined with AND (a product must satisfy every one).
             Call this whenever the customer states a hard constraint: a price limit, a brand,
-            a category, a product name, being on sale, or availability.
+            a product name, being on sale, or availability. For a category, use search_products.
             Prices are compared against the customer price, which already includes the
             premier discount for a premier customer.
             To apply constraints to semantic search results, pass their product_ids: only those
@@ -59,16 +58,6 @@ FILTER_PRODUCTS_SCHEMA = {
             "brand": {
                 "type": "string",
                 "description": "Exact brand name, case-insensitive, e.g. 'LHCER'.",
-            },
-            "categories": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": (
-                    "Only when the customer explicitly names a category. Each value is one "
-                    "category name such as 'Bathroom Scales' or 'Health' (case-insensitive, "
-                    "whole name, not a fragment). A product must belong to ALL listed "
-                    "categories, so 'health and bathroom scales' -> ['Health', 'Bathroom Scales']."
-                ),
             },
             "name_contains": {
                 "type": "string",
@@ -120,7 +109,6 @@ class FilterProductsArgs(BaseModel):
     min_price_exclusive: Optional[float] = Field(default=None, ge=0)
     min_price_inclusive: Optional[float] = Field(default=None, ge=0)
     brand: Optional[str] = None
-    categories: Optional[list[str]] = Field(default=None, min_length=1)
     name_contains: Optional[str] = None
     product_ids: Optional[list[int]] = None
     on_sale: Optional[bool] = None
@@ -135,16 +123,6 @@ class FilterProductsArgs(BaseModel):
         if not normalized_value:
             raise ValueError("must not be blank")
         return normalized_value
-
-    @field_validator("categories")
-    @classmethod
-    def normalize_categories(cls, categories: Optional[list[str]]) -> Optional[list[str]]:
-        if categories is None:
-            return None
-        normalized_categories = [normalize_text(category) for category in categories]
-        if not all(normalized_categories):
-            raise ValueError("category names must not be blank")
-        return normalized_categories
 
     @field_validator("product_ids")
     @classmethod
@@ -173,10 +151,6 @@ class FilterProductsArgs(BaseModel):
         return self
 
 
-def category_levels(category_path: str) -> set[str]:
-    return {normalize_text(level) for level in category_path.split(CATEGORY_LEVEL_SEPARATOR)}
-
-
 def price_within_bounds(
     price: float,
     max_price_exclusive: Optional[float],
@@ -203,7 +177,6 @@ def filter_products(
     min_price_exclusive: Optional[float],
     min_price_inclusive: Optional[float],
     brand: Optional[str],
-    categories: Optional[list[str]],
     name_contains: Optional[str],
     product_ids: Optional[list[int]],
     on_sale: Optional[bool],
@@ -226,7 +199,6 @@ def filter_products(
         for product in scoped_products
         if (not available or product.available)
         and (brand is None or normalize_text(product.brand) == brand)
-        and (categories is None or set(categories) <= category_levels(product.category))
         and (name_contains is None or normalize_text(product.name).startswith(name_contains))
         and (on_sale is None or product.is_on_sale == on_sale)
         and price_within_bounds(
