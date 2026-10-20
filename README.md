@@ -20,10 +20,9 @@ The agent answers free-text questions from shoppers, such as *"a scale under $10
 **How it answers:**
 1. A ReAct-style tool-calling loop reasons and calls the tools it needs.
 2. It feeds each tool result back to the model until the model can answer.
-3. A fast LLM check scores the answer.
-4. A doubtful answer goes to an LLM reviewer. If the reviewer confirms an error, the agent gets one chance to fix it.
-
-It is part of a university project on agentic RAG.
+3. Cascaded Selective Evaluation – A lightweight check runs first, followed by a more comprehensive review when needed.
+   1. Decision API – A fast, criteria-based check flags potentially problematic answers.
+   2. LLM Reviewer – Investigates flagged answers using additional context. If an issue is confirmed, the agent gets one chance to fix it.
 
 **Key design points:**
 
